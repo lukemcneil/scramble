@@ -1,0 +1,248 @@
+use rocket::{
+    http::{ContentType, Status},
+    response::{self, Responder},
+    Request, Response,
+};
+use serde::{Deserialize, Serialize};
+use std::io::Cursor;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
+
+pub(crate) type Result<T> = std::result::Result<T, Error>;
+// Convert our custom Error type into HTTP responses
+impl<'r> Responder<'r, 'r> for Error {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
+        let body = BadRequest::new(self);
+        let body = serde_json::to_string(&body).expect("to BadRequest serialize");
+        Ok(Response::build()
+            .status(Status::BadRequest)
+            .header(ContentType::JSON)
+            .sized_body(None, Cursor::new(body))
+            .finalize())
+    }
+}
+
+pub(crate) type Player = String;
+
+#[derive(Serialize, Debug)]
+pub(crate) enum Error {
+    GameConflict,
+    GameNotFound,
+    PlayerConflict,
+    PlayerNotFound,
+    RoundNotInStartState,
+    RoundNotInCollectingAnswersState,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::GameConflict => write!(f, "game conflict"),
+            Self::GameNotFound => write!(f, "game not found"),
+            Self::PlayerConflict => write!(f, "player conflict"),
+            Self::PlayerNotFound => write!(f, "player not found"),
+            Self::RoundNotInStartState => write!(f, "round not in start state"),
+            Self::RoundNotInCollectingAnswersState => {
+                write!(f, "round not in collecting answer state")
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct BadRequest {
+    error: String,
+    message: String,
+}
+
+impl BadRequest {
+    fn new(error: Error) -> Self {
+        Self {
+            error: format!("{error:?}"),
+            message: format!("{error}"),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct PlayerData {
+    /// The player with which the request is associated
+    pub(crate) player: Player,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
+pub(crate) struct Answer {
+    /// The player who gave the answer
+    player: Player,
+    /// The word the player spelled for the round
+    pub answer: String,
+}
+
+#[derive(PartialEq)]
+pub(crate) enum RoundState {
+    Start,
+    CollectingAnswers,
+    Complete,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub(crate) struct Round {
+    /// The list of letters that can be used to spell a word
+    pub(crate) letters: Vec<char>,
+    /// The list of answers given, one per player
+    pub(crate) answers: Vec<Answer>,
+}
+
+impl Round {
+    fn new(letters: Vec<char>) -> Self {
+        Round {
+            letters,
+            answers: Vec::new(),
+        }
+    }
+
+    fn state(&self, players: usize) -> RoundState {
+        if self.answers.is_empty() {
+            RoundState::Start
+        } else if self.answers.len() < players {
+            RoundState::CollectingAnswers
+        } else if self.answers.len() == players {
+            RoundState::Complete
+        } else {
+            panic!("Round in unknown state")
+        }
+    }
+}
+
+#[derive(Clone, Default, Deserialize, Serialize)]
+pub(crate) struct Game {
+    /// The list of players in the game
+    pub(crate) players: HashSet<String>,
+    /// The list of rounds in the game with the most recent round being the last item in the list
+    pub(crate) rounds: Vec<Round>,
+}
+
+impl Game {
+    pub(crate) fn add_player(&mut self, player: Player) -> Result<()> {
+        // Only allow adding players at the start of a round
+        if self.current_round_state() != RoundState::Start {
+            return Err(Error::RoundNotInStartState);
+        }
+        if self.players.insert(player) {
+            Ok(())
+        } else {
+            Err(Error::PlayerConflict)
+        }
+    }
+
+    pub(crate) fn remove_player(&mut self, player: Player) -> Result<()> {
+        // Only allow removing players at the start of a round
+        if self.current_round_state() != RoundState::Start {
+            return Err(Error::RoundNotInStartState);
+        }
+        self.players.remove(&player);
+        Ok(())
+    }
+
+    pub(crate) fn answer(&mut self, answer: Answer) -> Result<()> {
+        let player = &answer.player;
+        // Confirm the player exists
+        if !self.players.contains(player) {
+            return Err(Error::PlayerNotFound);
+        }
+        // Confirm we are collecting answers for the current round
+        let state = self.current_round_state();
+        if state != RoundState::Start && self.current_round_state() != RoundState::CollectingAnswers
+        {
+            return Err(Error::RoundNotInCollectingAnswersState);
+        }
+
+        let round = self.current_round_mut();
+        // Check if this player already added an answer
+        for a in &round.answers {
+            if a.player == answer.player {
+                return Ok(());
+            }
+        }
+        // Add the answer
+        round.answers.push(answer);
+        Ok(())
+    }
+
+    pub(crate) fn add_round_if_complete(&mut self, letters: Vec<char>) {
+        if self.current_round_state() == RoundState::Complete {
+            self.add_round(letters);
+        }
+    }
+
+    fn add_round(&mut self, letters: Vec<char>) {
+        self.rounds.push(Round::new(letters));
+    }
+
+    pub(crate) fn current_round(&self) -> &Round {
+        let index = self.rounds.len() - 1;
+        &self.rounds[index]
+    }
+
+    fn current_round_mut(&mut self) -> &mut Round {
+        let index = self.rounds.len() - 1;
+        &mut self.rounds[index]
+    }
+
+    fn current_round_state(&self) -> RoundState {
+        let players = self.players.len();
+        let round = self.current_round();
+        round.state(players)
+    }
+
+    pub fn get_score(&self) -> HashMap<String, i32> {
+        todo!();
+        // let mut scores = HashMap::new();
+        // for round in &self.rounds {
+        //     for guess in &round.guesses {
+        //         for answer in guess.answers.iter() {
+        //             let score = scores.entry(guess.player.clone()).or_insert(0);
+        //             if round.answers.contains(answer) {
+        //                 *score += 1;
+        //             } else {
+        //                 *score -= 1;
+        //             }
+        //         }
+        //     }
+        // }
+        // scores
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct Games(HashMap<String, Game>);
+
+impl Games {
+    #[allow(clippy::map_entry)]
+    pub(crate) fn create(&mut self, game_id: String, initial_player: Player) -> Result<()> {
+        if self.0.contains_key(&game_id) {
+            Err(Error::GameConflict)
+        } else {
+            let mut game = Game::default();
+            game.add_round(Self::get_random_letters());
+            game.add_player(initial_player)?;
+            self.0.insert(game_id, game);
+            Ok(())
+        }
+    }
+
+    pub(crate) fn get_random_letters() -> Vec<char> {
+        // TODO
+        Vec::new()
+    }
+
+    pub(crate) fn get(&mut self, game_id: &str) -> Result<&mut Game> {
+        self.0.get_mut(game_id).ok_or(Error::GameNotFound)
+    }
+
+    pub(crate) fn delete(&mut self, game_id: &str) {
+        self.0.remove(game_id);
+    }
+}

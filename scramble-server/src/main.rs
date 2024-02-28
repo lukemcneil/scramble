@@ -1,8 +1,10 @@
+mod dictionary;
 mod types;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use dictionary::{get_random_letters, Dictionary};
 use types::{Game, Games, Player};
 
 use crate::types::{Answer, PlayerData, Result};
@@ -15,16 +17,14 @@ extern crate rocket;
 #[put("/game/<game_id>", data = "<player>")]
 fn create_game(game_id: &str, player: Json<PlayerData>, games: &State<Mutex<Games>>) -> Result<()> {
     let mut games = games.lock().unwrap();
-    let player = player.into_inner();
-    games.create(game_id.to_string(), player.player)
+    games.create(game_id.to_string(), player.into_inner().player)
 }
 
 #[post("/game/<game_id>", data = "<player>")]
 fn join_game(game_id: &str, player: Json<PlayerData>, games: &State<Mutex<Games>>) -> Result<()> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
-    let player = player.into_inner();
-    game.add_player(player.player)
+    game.add_player(player.into_inner().player)
 }
 
 #[get("/game/<game_id>")]
@@ -35,12 +35,16 @@ fn game(game_id: &str, games: &State<Mutex<Games>>) -> Result<Json<Game>> {
 }
 
 #[post("/game/<game_id>/answer", data = "<answer>")]
-fn answer(game_id: &str, answer: Json<Answer>, games: &State<Mutex<Games>>) -> Result<()> {
+fn answer(
+    game_id: &str,
+    answer: Json<Answer>,
+    games: &State<Mutex<Games>>,
+    dictionary: &State<Dictionary>,
+) -> Result<()> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
-    let answer = answer.into_inner();
-    game.answer(answer)?;
-    game.add_round_if_complete(Games::get_random_letters());
+    game.answer(answer.into_inner(), dictionary)?;
+    game.add_round_if_complete(get_random_letters(7));
     Ok(())
 }
 
@@ -48,8 +52,7 @@ fn answer(game_id: &str, answer: Json<Answer>, games: &State<Mutex<Games>>) -> R
 fn exit_game(game_id: &str, player: Json<PlayerData>, games: &State<Mutex<Games>>) -> Result<()> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
-    let player = player.into_inner();
-    game.remove_player(player.player)
+    game.remove_player(player.into_inner().player)
 }
 
 #[delete("/game/<game_id>")]
@@ -59,10 +62,14 @@ fn delete_game(game_id: &str, games: &State<Mutex<Games>>) {
 }
 
 #[get("/game/<game_id>/score")]
-fn get_score(game_id: &str, games: &State<Mutex<Games>>) -> Result<Json<HashMap<Player, i32>>> {
+fn get_score(
+    game_id: &str,
+    games: &State<Mutex<Games>>,
+    dictionary: &State<Dictionary>,
+) -> Result<Json<HashMap<Player, u32>>> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?.clone();
-    Ok(Json(game.get_score()))
+    Ok(Json(game.get_score(dictionary)))
 }
 
 #[launch]
@@ -81,4 +88,5 @@ fn rocket() -> _ {
             ],
         )
         .manage(Mutex::new(Games::default()))
+        .manage(Dictionary::new("word-list.txt"))
 }

@@ -10,6 +10,8 @@ use std::{
     fmt,
 };
 
+use crate::dictionary::{get_random_letters, Dictionary};
+
 pub(crate) type Result<T> = std::result::Result<T, Error>;
 // Convert our custom Error type into HTTP responses
 impl<'r> Responder<'r, 'r> for Error {
@@ -34,6 +36,8 @@ pub(crate) enum Error {
     PlayerNotFound,
     RoundNotInStartState,
     RoundNotInCollectingAnswersState,
+    WordNotInDictionary,
+    WordUsesExtraLetters,
 }
 
 impl fmt::Display for Error {
@@ -47,6 +51,8 @@ impl fmt::Display for Error {
             Self::RoundNotInCollectingAnswersState => {
                 write!(f, "round not in collecting answer state")
             }
+            Self::WordNotInDictionary => write!(f, "word is not in dictionary"),
+            Self::WordUsesExtraLetters => write!(f, "word uses extra letters"),
         }
     }
 }
@@ -146,7 +152,7 @@ impl Game {
         Ok(())
     }
 
-    pub(crate) fn answer(&mut self, answer: Answer) -> Result<()> {
+    pub(crate) fn answer(&mut self, answer: Answer, dictionary: &Dictionary) -> Result<()> {
         let player = &answer.player;
         // Confirm the player exists
         if !self.players.contains(player) {
@@ -166,6 +172,36 @@ impl Game {
                 return Ok(());
             }
         }
+        // Check if the word is playable
+        if dictionary
+            .get_word_info_if_playable(&answer.answer)
+            .is_none()
+        {
+            return Err(Error::WordNotInDictionary);
+        }
+        // Check that the word is valid with the letters from this round
+        let mut letters_left: HashMap<char, u32> = HashMap::new();
+        for letter in &round.letters {
+            let letter_count = letters_left.entry(*letter).or_default();
+            *letter_count += 1;
+        }
+        for letter in answer.answer.chars() {
+            let entry = letters_left.entry(letter);
+            match entry {
+                std::collections::hash_map::Entry::Occupied(mut letter_count) => {
+                    let letter_count = letter_count.get_mut();
+                    if letter_count > &mut 0 {
+                        *letter_count -= 1;
+                    } else {
+                        return Err(Error::WordUsesExtraLetters);
+                    }
+                }
+                std::collections::hash_map::Entry::Vacant(_) => {
+                    return Err(Error::WordUsesExtraLetters)
+                }
+            }
+        }
+
         // Add the answer
         round.answers.push(answer);
         Ok(())
@@ -197,22 +233,19 @@ impl Game {
         round.state(players)
     }
 
-    pub fn get_score(&self) -> HashMap<String, i32> {
-        todo!();
-        // let mut scores = HashMap::new();
-        // for round in &self.rounds {
-        //     for guess in &round.guesses {
-        //         for answer in guess.answers.iter() {
-        //             let score = scores.entry(guess.player.clone()).or_insert(0);
-        //             if round.answers.contains(answer) {
-        //                 *score += 1;
-        //             } else {
-        //                 *score -= 1;
-        //             }
-        //         }
-        //     }
-        // }
-        // scores
+    pub fn get_score(&self, dictionary: &Dictionary) -> HashMap<String, u32> {
+        let mut scores = HashMap::new();
+        for round in &self.rounds {
+            for answer in round.answers.iter() {
+                let score = scores.entry(answer.player.clone()).or_insert(0);
+                let word_score = dictionary
+                    .get_word_info_if_playable(&answer.answer)
+                    .expect("answers should all be in dictionary")
+                    .score;
+                *score += word_score;
+            }
+        }
+        scores
     }
 }
 
@@ -226,16 +259,11 @@ impl Games {
             Err(Error::GameConflict)
         } else {
             let mut game = Game::default();
-            game.add_round(Self::get_random_letters());
+            game.add_round(get_random_letters(7));
             game.add_player(initial_player)?;
             self.0.insert(game_id, game);
             Ok(())
         }
-    }
-
-    pub(crate) fn get_random_letters() -> Vec<char> {
-        // TODO
-        Vec::new()
     }
 
     pub(crate) fn get(&mut self, game_id: &str) -> Result<&mut Game> {
@@ -245,4 +273,41 @@ impl Games {
     pub(crate) fn delete(&mut self, game_id: &str) {
         self.0.remove(game_id);
     }
+}
+
+#[test]
+fn test_get_score() -> Result<()> {
+    let mut game = Game::default();
+    let dictionary = Dictionary::new("word-list.txt");
+    game.add_round(vec!['s', 'c', 'r', 'a', 'm', 'b', 'l', 'e']);
+    game.add_player(String::from("test"))?;
+    assert!(game
+        .answer(
+            Answer {
+                player: String::from("test"),
+                answer: String::from("notaword"),
+            },
+            &dictionary,
+        )
+        .is_err_and(|e| matches!(e, Error::WordNotInDictionary)));
+    assert!(game
+        .answer(
+            Answer {
+                player: String::from("test"),
+                answer: String::from("bell"),
+            },
+            &dictionary,
+        )
+        .is_err_and(|e| matches!(e, Error::WordUsesExtraLetters)));
+    game.answer(
+        Answer {
+            player: String::from("test"),
+            answer: String::from("scramble"),
+        },
+        &dictionary,
+    )?;
+    let mut expected = HashMap::new();
+    expected.insert(String::from("test"), 14);
+    assert_eq!(game.get_score(&dictionary), expected);
+    Ok(())
 }

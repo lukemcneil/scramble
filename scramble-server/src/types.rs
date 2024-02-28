@@ -186,6 +186,7 @@ impl Game {
             *letter_count += 1;
         }
         for letter in answer.answer.chars() {
+            let letter = letter.to_ascii_uppercase();
             let entry = letters_left.entry(letter);
             match entry {
                 std::collections::hash_map::Entry::Occupied(mut letter_count) => {
@@ -279,7 +280,7 @@ impl Games {
 fn test_get_score() -> Result<()> {
     let mut game = Game::default();
     let dictionary = Dictionary::new("word-list.txt");
-    game.add_round(vec!['s', 'c', 'r', 'a', 'm', 'b', 'l', 'e']);
+    game.add_round(vec!['S', 'C', 'R', 'A', 'M', 'B', 'L', 'E']);
     game.add_player(String::from("test"))?;
     assert!(game
         .answer(

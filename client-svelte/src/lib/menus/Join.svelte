@@ -6,7 +6,6 @@
 	export let setGameState: (new_state: string) => void;
 	let name: string;
 	let game_name: string;
-	let game_mode: string = "text";
 
 	let error_message: string = '';
 	let no_name_error_message = 'no name';
@@ -27,7 +26,6 @@
 			if (response.ok) {
 				localStorage.setItem('name', name);
 				localStorage.setItem('game_name', game_name);
-				localStorage.setItem('game_mode', game_mode);
 				setGameState('answer');
 			} else {
 				if (response.status == 409) {
@@ -52,7 +50,6 @@
 			if (response.ok) {
 				localStorage.setItem('name', name);
 				localStorage.setItem('game_name', game_name);
-				localStorage.setItem('game_mode', game_mode);
 				setGameState('answer');
 			}
 		});
@@ -60,7 +57,7 @@
 </script>
 
 <main>
-	<h1>Weighty Inquiries</h1>
+	<h1>Scramble</h1>
 	<div>
 		<InputField bind:value={name} text="enter your name" />
 	</div>
@@ -77,22 +74,10 @@
 		<Button text="Create Game" onClick={onClickCreateGame} />
 	</div>
 
-	<h3>Game Mode</h3>
+	<div>
 		<div>
-		<label>
-			<input type="radio" bind:group={game_mode} value={'text'} />
-			Text	
-		</label>
-
-		<label>
-			<input type="radio" bind:group={game_mode} value={'picture'} />
-			Pictures	
-		</label>
+			{error_message}
 		</div>
-	<div>
-
-	<div>
-		{error_message}
 	</div>
 </main>
 

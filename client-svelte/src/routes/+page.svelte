@@ -3,8 +3,6 @@
 	import Join from '$lib/menus/Join.svelte';
 	import Answer from '$lib/menus/Answer.svelte';
 	import AnswerWait from '$lib/menus/AnswerWait.svelte';
-	import Guess from '$lib/menus/Guess.svelte';
-	import GuessWait from '$lib/menus/GuessWait.svelte';
 	import Results from '$lib/menus/Results.svelte';
 
 	import { deleteGame, deletePlayerFromGame, getGame } from '$lib/functions/requests';
@@ -90,14 +88,6 @@
 		/>
 	{:else if game_state == 'answer_wait'}
 		<AnswerWait {setGameState} game_name={localStorage.getItem('game_name')} />
-	{:else if game_state == 'guess'}
-		<Guess
-			{setGameState}
-			name={localStorage.getItem('name')}
-			game_name={localStorage.getItem('game_name')}
-		/>
-	{:else if game_state == 'guess_wait'}
-		<GuessWait {setGameState} game_name={localStorage.getItem('game_name')} />
 	{:else if game_state == 'results'}
 		<Results
 			{setGameState}

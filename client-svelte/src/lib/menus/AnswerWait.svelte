@@ -1,7 +1,4 @@
 <script lang="ts">
-	import Button from '$lib/Button.svelte';
-	import InputField from '$lib/InputField.svelte';
-	import { Player } from '$lib/datatypes/player';
 	import { onMount } from 'svelte';
 	import { getGame, postAnswer } from '$lib/functions/requests';
 	import { sleep } from '$lib/functions/helper';
@@ -10,7 +7,7 @@
 	export let game_name: string | null;
 
 	let players: Array<string> = [];
-	let current_question: string | undefined = '';
+	let current_letters: string | undefined = '';
 	let round_count: number;
 	let waiting_for: Array<string> = [];
 
@@ -19,11 +16,10 @@
 			.then((response) => response.json())
 			.then((data) => {
 				players = data.players;
-				current_question = data.rounds[data.rounds.length - 1].question;
+				current_letters = data.rounds[data.rounds.length - 1].letters;
 				round_count = data.rounds.length;
-				console.log(data);
-				if (data.rounds[data.rounds.length - 1].answers.length == players.length) {
-					setGameState('guess');
+				if (data.rounds[data.rounds.length - 1].answers.length == 0) {
+					setGameState('results');
 				} else {
 					waiting_for = players.filter(
 						(player) =>
@@ -31,7 +27,6 @@
 								(answer) => answer.player === player
 							)
 					);
-					console.log(waiting_for);
 				}
 			});
 	}
@@ -61,7 +56,7 @@
 		</div>
 	{/each}
 	<div>
-		{current_question}
+		{current_letters}
 	</div>
 </main>
 

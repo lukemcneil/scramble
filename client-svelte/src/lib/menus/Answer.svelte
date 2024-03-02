@@ -3,7 +3,7 @@
 	import InputField from '$lib/InputField.svelte';
 	import { Player } from '$lib/datatypes/player';
 	import { onMount } from 'svelte';
-	import { getGame, postAnswer, postChangeQuestion, postChatGptQuestion } from '$lib/functions/requests';
+	import { getGame, postAnswer } from '$lib/functions/requests';
 	import { sleep } from '$lib/functions/helper';
 
 	export let setGameState: (new_state: string) => void;
@@ -11,21 +11,22 @@
 	export let game_name: string | null;
 
 	let players: Array<Player> = [];
-	let current_question: string | undefined = '';
+	let current_letters: Array<string> = [];
 	let round_count: number;
+	let error_message: String = '';
 
 	let answer: string = '';
-	let prompt: string = '';
+	// let prompt: string = '';
 
 	function onSubmitClick() {
-		if (answer == '') {
-			console.log('you need a non-empty answer');
-			return;
-		}
 		const response: Promise<Response> = postAnswer(game_name, name, answer);
 		response.then((response) => {
 			if (response.ok) {
 				setGameState('answer_wait');
+			} else {
+				response.json().then((data) => {
+					error_message = data.message;
+				});
 			}
 		});
 	}
@@ -35,7 +36,7 @@
 			.then((response) => response.json())
 			.then((data) => {
 				players = data.players;
-				current_question = data.rounds[data.rounds.length - 1].question;
+				current_letters = data.rounds[data.rounds.length - 1].letters;
 				round_count = data.rounds.length;
 			});
 	}
@@ -53,33 +54,34 @@
 		getGameLoop();
 	});
 
-	function onChangeQuestion() {
-		const response: Promise<Response> = postChangeQuestion(game_name);
-		readGame();
-	}
+	// function onChangeQuestion() {
+	// 	const response: Promise<Response> = postChangeQuestion(game_name);
+	// 	readGame();
+	// }
 
-	function onMrGptQuestion() {
-		if (prompt == '') {
-			return;
-		}
-		const response: Promise<Response> = postChatGptQuestion(game_name, prompt);
-		readGame();
-	}
+	// function onMrGptQuestion() {
+	// 	if (prompt == '') {
+	// 		return;
+	// 	}
+	// 	const response: Promise<Response> = postChatGptQuestion(game_name, prompt);
+	// 	readGame();
+	// }
 </script>
 
 <main>
 	<h2>
 		Round: {round_count}
 	</h2>
-	<div>
+	<!-- <div>
 		<Button text="Change Question" onClick={onChangeQuestion} />
-	</div>
+	</div> -->
 	<div>
-		{current_question}
+		{current_letters}
 	</div>
 	<div>
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
+	<div>{error_message}</div>
 	<div>
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>
@@ -90,12 +92,12 @@
 			{player}
 		</div>
 	{/each}
-	<div>
+	<!-- <div>
 		<InputField bind:value={prompt} text="enter Mr. GPT prompt" />
-	</div>
-	<div>
+	</div> -->
+	<!-- <div>
 		<Button text="Get Mr. GPT question" onClick={onMrGptQuestion} />
-	</div>
+	</div> -->
 </main>
 
 <style>

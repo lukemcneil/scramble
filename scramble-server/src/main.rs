@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use dictionary::{get_random_letters, Dictionary};
+use rocket::http::Method;
+use rocket_cors::{AllowedOrigins, CorsOptions};
 use types::{Game, Games, Player};
 
 use crate::types::{Answer, PlayerData, Result};
@@ -74,7 +76,23 @@ fn get_score(
 
 #[launch]
 fn rocket() -> _ {
+    let cors = CorsOptions::default()
+        .allowed_origins(AllowedOrigins::all())
+        .allowed_methods(
+            vec![
+                Method::Get,
+                Method::Post,
+                Method::Patch,
+                Method::Put,
+                Method::Delete,
+            ]
+            .into_iter()
+            .map(From::from)
+            .collect(),
+        )
+        .allow_credentials(true);
     rocket::build()
+        .attach(cors.to_cors().unwrap())
         .mount(
             "/",
             routes![

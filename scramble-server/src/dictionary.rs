@@ -5,6 +5,7 @@ use std::{
 };
 
 use rand::distributions::{Distribution, WeightedIndex};
+use serde::{Deserialize, Serialize};
 
 struct Tile {
     letter: char,
@@ -73,8 +74,9 @@ pub(crate) fn get_random_letters(size: usize) -> Vec<char> {
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WordInfo {
+    pub word: String,
     pub score: u32,
     pub definition: String,
 }
@@ -108,7 +110,14 @@ impl Dictionary {
             let word = word.to_string();
             let definition = definition.to_string();
             let score = self.calculate_score(&word);
-            words.insert(word, WordInfo { score, definition });
+            words.insert(
+                word.clone(),
+                WordInfo {
+                    word,
+                    score,
+                    definition,
+                },
+            );
         }
         words
     }
@@ -118,6 +127,49 @@ impl Dictionary {
             .filter_map(|c| self.letter_scores.get(&c.to_ascii_uppercase()))
             .sum()
     }
+
+    pub fn check_word_uses_letters(letters: &[char], answer: &str) -> bool {
+        let mut letters_left: HashMap<char, u32> = HashMap::new();
+        for letter in letters {
+            let letter_count = letters_left.entry(*letter).or_default();
+            *letter_count += 1;
+        }
+        for letter in answer.chars() {
+            let letter = letter.to_ascii_uppercase();
+            let entry = letters_left.entry(letter);
+            match entry {
+                std::collections::hash_map::Entry::Occupied(mut letter_count) => {
+                    let letter_count = letter_count.get_mut();
+                    if letter_count > &mut 0 {
+                        *letter_count -= 1;
+                    } else {
+                        return false;
+                    }
+                }
+                std::collections::hash_map::Entry::Vacant(_) => {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    pub fn get_best_words(&self, letters: &[char], num_words: usize) -> Vec<WordInfo> {
+        let mut best_words: Vec<WordInfo> = self
+            .playable_words
+            .iter()
+            .filter_map(|(word, info)| {
+                if Self::check_word_uses_letters(letters, &word) {
+                    Some(info.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        best_words.sort_by(|a, b| b.score.cmp(&a.score));
+        best_words.truncate(num_words);
+        best_words
+    }
 }
 
 #[test]
@@ -125,4 +177,12 @@ fn test_read_words() {
     let words = Dictionary::new("word-list.txt");
     assert_eq!(words.get_word_info_if_playable("zeugma").unwrap().score, 18);
     assert!(words.get_word_info_if_playable("notaword").is_none());
+}
+
+#[test]
+fn test_best_words() {
+    let words = Dictionary::new("word-list.txt");
+    for value in words.get_best_words(&['R', 'E', 'M', 'O', 'R', 'S', 'E'], 5) {
+        println!("{:?}", value);
+    }
 }

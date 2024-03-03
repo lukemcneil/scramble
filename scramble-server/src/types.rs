@@ -10,7 +10,7 @@ use std::{
     fmt,
 };
 
-use crate::dictionary::{get_random_letters, Dictionary};
+use crate::dictionary::{get_random_letters, Dictionary, WordInfo};
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
 // Convert our custom Error type into HTTP responses
@@ -86,6 +86,18 @@ pub(crate) struct Answer {
     pub answer: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
+pub(crate) struct AnswerWithWordInfo {
+    /// The player who gave the answer
+    player: Player,
+    /// The word the player spelled for the round
+    pub answer: String,
+    /// The score of the word
+    pub score: u32,
+    /// The definition of the word
+    pub definition: String,
+}
+
 #[derive(PartialEq)]
 pub(crate) enum RoundState {
     Start,
@@ -98,14 +110,17 @@ pub(crate) struct Round {
     /// The list of letters that can be used to spell a word
     pub(crate) letters: Vec<char>,
     /// The list of answers given, one per player
-    pub(crate) answers: Vec<Answer>,
+    pub(crate) answers: Vec<AnswerWithWordInfo>,
+    /// The list of best answers for this round
+    pub(crate) best_answers: Vec<WordInfo>,
 }
 
 impl Round {
-    fn new(letters: Vec<char>) -> Self {
+    fn new(letters: Vec<char>, dictionary: &Dictionary) -> Self {
         Round {
-            letters,
+            letters: letters.clone(),
             answers: Vec::new(),
+            best_answers: dictionary.get_best_words(&letters, 5),
         }
     }
 
@@ -173,49 +188,35 @@ impl Game {
             }
         }
         // Check if the word is playable
-        if dictionary
-            .get_word_info_if_playable(&answer.answer)
-            .is_none()
-        {
-            return Err(Error::WordNotInDictionary);
-        }
-        // Check that the word is valid with the letters from this round
-        let mut letters_left: HashMap<char, u32> = HashMap::new();
-        for letter in &round.letters {
-            let letter_count = letters_left.entry(*letter).or_default();
-            *letter_count += 1;
-        }
-        for letter in answer.answer.chars() {
-            let letter = letter.to_ascii_uppercase();
-            let entry = letters_left.entry(letter);
-            match entry {
-                std::collections::hash_map::Entry::Occupied(mut letter_count) => {
-                    let letter_count = letter_count.get_mut();
-                    if letter_count > &mut 0 {
-                        *letter_count -= 1;
-                    } else {
-                        return Err(Error::WordUsesExtraLetters);
-                    }
+        match dictionary.get_word_info_if_playable(&answer.answer) {
+            Some(word_info) => {
+                // Check that the word is valid with the letters from this round
+                if !Dictionary::check_word_uses_letters(&round.letters, &answer.answer) {
+                    return Err(Error::WordUsesExtraLetters);
                 }
-                std::collections::hash_map::Entry::Vacant(_) => {
-                    return Err(Error::WordUsesExtraLetters)
-                }
+
+                let answer_with_info = AnswerWithWordInfo {
+                    player: answer.player,
+                    answer: answer.answer,
+                    score: word_info.score,
+                    definition: word_info.definition.clone(),
+                };
+                // Add the answer with info
+                round.answers.push(answer_with_info);
+                Ok(())
             }
+            None => Err(Error::WordNotInDictionary),
         }
-
-        // Add the answer
-        round.answers.push(answer);
-        Ok(())
     }
 
-    pub(crate) fn add_round_if_complete(&mut self, letters: Vec<char>) {
+    pub(crate) fn add_round_if_complete(&mut self, letters: Vec<char>, dictionary: &Dictionary) {
         if self.current_round_state() == RoundState::Complete {
-            self.add_round(letters);
+            self.add_round(letters, dictionary);
         }
     }
 
-    fn add_round(&mut self, letters: Vec<char>) {
-        self.rounds.push(Round::new(letters));
+    fn add_round(&mut self, letters: Vec<char>, dictionary: &Dictionary) {
+        self.rounds.push(Round::new(letters, dictionary));
     }
 
     pub(crate) fn current_round(&self) -> &Round {
@@ -255,12 +256,17 @@ pub(crate) struct Games(HashMap<String, Game>);
 
 impl Games {
     #[allow(clippy::map_entry)]
-    pub(crate) fn create(&mut self, game_id: String, initial_player: Player) -> Result<()> {
+    pub(crate) fn create(
+        &mut self,
+        game_id: String,
+        initial_player: Player,
+        dictionary: &Dictionary,
+    ) -> Result<()> {
         if self.0.contains_key(&game_id) {
             Err(Error::GameConflict)
         } else {
             let mut game = Game::default();
-            game.add_round(get_random_letters(7));
+            game.add_round(get_random_letters(7), dictionary);
             game.add_player(initial_player)?;
             self.0.insert(game_id, game);
             Ok(())
@@ -280,7 +286,7 @@ impl Games {
 fn test_get_score() -> Result<()> {
     let mut game = Game::default();
     let dictionary = Dictionary::new("word-list.txt");
-    game.add_round(vec!['S', 'C', 'R', 'A', 'M', 'B', 'L', 'E']);
+    game.add_round(vec!['S', 'C', 'R', 'A', 'M', 'B', 'L', 'E'], &dictionary);
     game.add_player(String::from("test"))?;
     assert!(game
         .answer(

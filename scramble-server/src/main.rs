@@ -20,9 +20,14 @@ use rocket::{Config, State};
 extern crate rocket;
 
 #[put("/game/<game_id>", data = "<player>")]
-fn create_game(game_id: &str, player: Json<PlayerData>, games: &State<Mutex<Games>>) -> Result<()> {
+fn create_game(
+    game_id: &str,
+    player: Json<PlayerData>,
+    games: &State<Mutex<Games>>,
+    dictionary: &State<Dictionary>,
+) -> Result<()> {
     let mut games = games.lock().unwrap();
-    games.create(game_id.to_string(), player.into_inner().player)
+    games.create(game_id.to_string(), player.into_inner().player, &dictionary)
 }
 
 #[post("/game/<game_id>", data = "<player>")]
@@ -49,7 +54,7 @@ fn answer(
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     game.answer(answer.into_inner(), dictionary)?;
-    game.add_round_if_complete(get_random_letters(7));
+    game.add_round_if_complete(get_random_letters(7), &dictionary);
     Ok(())
 }
 

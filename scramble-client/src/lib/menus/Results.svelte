@@ -3,12 +3,14 @@
 	import type { Answer } from '$lib/datatypes/answer';
 	import { onMount } from 'svelte';
 	import { getGame, getScore } from '$lib/functions/requests';
+	import Tiles from './Tiles.svelte';
+	import Tile from './Tile.svelte';
 
 	export let setGameState: (new_state: string) => void;
 	export let name: string | null;
 	export let game_name: string | null;
 
-	let letters: string;
+	let current_letters: Array<string> = [];
 	let answers: Array<Answer> = [];
 	let correct_answer_map: Map<string, string> = new Map();
 	let my_answer: string;
@@ -36,7 +38,7 @@
 		getGame(game_name)
 			.then((response) => response.json())
 			.then((data) => {
-				letters = data.rounds[data.rounds.length - 2].letters;
+				current_letters = data.rounds[data.rounds.length - 2].letters;
 				answers = data.rounds[data.rounds.length - 2].answers;
 
 				answers.forEach((answer: Answer) => {
@@ -54,11 +56,12 @@
 
 <main>
 	<h2>Results</h2>
+	<Tiles {current_letters}></Tiles>
 	<div>
-		{letters}
-	</div>
-	<div>
-		You said: {my_answer}
+		You said
+		{#if my_answer}
+			<Tiles current_letters={my_answer.split('')}></Tiles>
+		{/if}
 	</div>
 	{#each score_map as [player, score]}
 		<div>

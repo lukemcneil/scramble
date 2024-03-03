@@ -2,16 +2,19 @@ mod dictionary;
 mod types;
 
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::sync::Mutex;
 
 use dictionary::{get_random_letters, Dictionary};
+use rocket::config::LogLevel;
 use rocket::http::Method;
 use rocket_cors::{AllowedOrigins, CorsOptions};
+use structopt::StructOpt;
 use types::{Game, Games, Player};
 
 use crate::types::{Answer, PlayerData, Result};
 use rocket::serde::json::Json;
-use rocket::State;
+use rocket::{Config, State};
 
 #[macro_use]
 extern crate rocket;
@@ -74,8 +77,33 @@ fn get_score(
     Ok(Json(game.get_score(dictionary)))
 }
 
+#[derive(Debug, StructOpt)]
+struct Opt {
+    /// An IP address the application will listen on.
+    #[structopt(long = "host", short = "H", default_value = "0.0.0.0")]
+    address: IpAddr,
+    /// A port number to listen on.
+    #[structopt(long = "port", short = "P", default_value = "8172")]
+    port: u16,
+    /// The log level.
+    #[structopt(
+        default_value = "normal",
+        long = "log-level",
+        possible_values = &["off", "debug", "normal", "critical"]
+    )]
+    log_level: LogLevel,
+}
+
 #[launch]
 fn rocket() -> _ {
+    let opt = Opt::from_args();
+    let config = Config {
+        address: opt.address,
+        port: opt.port,
+        log_level: opt.log_level,
+        ..Config::default()
+    };
+
     let cors = CorsOptions::default()
         .allowed_origins(AllowedOrigins::all())
         .allowed_methods(
@@ -92,6 +120,7 @@ fn rocket() -> _ {
         )
         .allow_credentials(true);
     rocket::build()
+        .configure(config)
         .attach(cors.to_cors().unwrap())
         .mount(
             "/",

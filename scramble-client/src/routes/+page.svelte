@@ -12,7 +12,7 @@
 	let game_state: string | null;
 
 	let production_url: string = 'https://scramble-vr7r.onrender.com/game/';
-	let test_url: string = 'http://127.0.0.1:8172/game/';
+	let test_url: string = 'http://0.0.0.0:8172/game/';
 
 	function setGameState(new_state: string) {
 		localStorage.setItem('game_state', new_state);

@@ -43,7 +43,6 @@ export async function postAnswer(game_name: string | null, name: string | null, 
 			answer: answer
 		})
 	});
-	console.log(response)
 	return response;
 }
 

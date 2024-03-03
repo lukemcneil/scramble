@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getGame, postAnswer } from '$lib/functions/requests';
 	import { sleep } from '$lib/functions/helper';
+	import Tiles from './Tiles.svelte';
 
 	export let setGameState: (new_state: string) => void;
 	export let game_name: string | null;
@@ -49,15 +50,13 @@
 	<h2>
 		Round: {round_count}
 	</h2>
+	<Tiles {current_letters}></Tiles>
 	<h3>Waiting on players...</h3>
 	{#each waiting_for as player}
 		<div>
 			{player}
 		</div>
 	{/each}
-	<div>
-		{current_letters}
-	</div>
 </main>
 
 <style>

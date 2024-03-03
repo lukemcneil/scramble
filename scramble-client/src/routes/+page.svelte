@@ -95,7 +95,7 @@
 			game_name={localStorage.getItem('game_name')}
 		/>
 	{/if}
-	<div style="padding: 50px;"></div>
+	<div style="padding: 200px;"></div>
 	{#if game_state == 'answer'}
 		<div>
 			<Button text="Leave Game" onClick={onLeave} />

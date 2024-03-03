@@ -74,14 +74,15 @@
 		Round: {round_count}
 	</h2>
 	<Tiles {current_letters}></Tiles>
-	<div>
+	<div style="padding-top: 50px">
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
 	<div>{error_message}</div>
-	<div>
+	<div style="padding-bottom: 50px">
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>
 
+	<hr />
 	<div>Players:</div>
 	{#each players as player}
 		<div>

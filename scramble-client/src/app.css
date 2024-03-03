@@ -1,5 +1,5 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Roboto Mono', monospace;
   line-height: 1.5;
   font-weight: 400;
 
@@ -64,15 +64,14 @@ h3 {
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
+  /* border-radius: 8px; */
+  /* border: 1px solid; */
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
+  /* transition: border-color 0.25s; */
 }
 button:hover {
   border-color: #646cff;
@@ -80,6 +79,12 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+input {
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
 }
 
 @media (prefers-color-scheme: light) {
@@ -96,7 +101,7 @@ button:focus-visible {
 }
 
 div {
-  padding: 5px;
+  padding: 2px;
   text-align: center;
 }
 

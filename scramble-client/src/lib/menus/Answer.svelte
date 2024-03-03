@@ -82,13 +82,15 @@
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>
 
-	<hr />
-	<div>Players:</div>
-	{#each players as player}
-		<div>
-			{player}
-		</div>
-	{/each}
+	{#if round_count == 1}
+		<hr />
+		<h3>Players:</h3>
+		{#each players as player}
+			<div>
+				{player}
+			</div>
+		{/each}
+	{/if}
 	<!-- <div>
 		<InputField bind:value={prompt} text="enter Mr. GPT prompt" />
 	</div> -->

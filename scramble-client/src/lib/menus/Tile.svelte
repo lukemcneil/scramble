@@ -29,8 +29,8 @@
 
 	.score {
 		position: absolute;
-		bottom: 5px;
-		right: 5px;
+		bottom: 3px;
+		right: 3px;
 		font-size: 14px;
 		color: #333; /* Default score color */
 	}

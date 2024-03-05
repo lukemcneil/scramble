@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getGame, postAnswer } from '$lib/functions/requests';
+	import { getGame } from '$lib/functions/requests';
 	import { sleep } from '$lib/functions/helper';
 	import Tiles from './Tiles.svelte';
 

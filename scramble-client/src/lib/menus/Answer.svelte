@@ -11,13 +11,14 @@
 	export let name: string | null;
 	export let game_name: string | null;
 
-	let players: Array<Player> = [];
+	let players: Array<string> = [];
 	let current_letters: Array<string> = [];
+	let letter_order: Array<number> = [];
 	let round_count: number;
 	let error_message: String = '';
+	let waiting_for: Array<string> = [];
 
 	let answer: string = '';
-	// let prompt: string = '';
 
 	function onSubmitClick() {
 		const response: Promise<Response> = postAnswer(game_name, name, answer);
@@ -38,7 +39,14 @@
 			.then((data) => {
 				players = data.players;
 				current_letters = data.rounds[data.rounds.length - 1].letters;
+				if (letter_order.length == 0) {
+					letter_order = new Array(current_letters.length).fill(null).map((_, i) => i);
+				}
 				round_count = data.rounds.length;
+				waiting_for = players.filter(
+					(player) =>
+						!data.rounds[data.rounds.length - 1].answers.some((answer) => answer.player === player)
+				);
 			});
 	}
 
@@ -55,25 +63,33 @@
 		getGameLoop();
 	});
 
-	// function onChangeQuestion() {
-	// 	const response: Promise<Response> = postChangeQuestion(game_name);
-	// 	readGame();
-	// }
+	function shuffle_array<T>(array: T[]): T[] {
+		let currentIndex = array.length,
+			randomIndex;
+		// While there remain elements to shuffle.
+		while (currentIndex != 0) {
+			// Pick a remaining element.
+			randomIndex = Math.floor(Math.random() * currentIndex);
+			currentIndex--;
+			// And swap it with the current element.
+			[array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+		}
+		return array;
+	}
 
-	// function onMrGptQuestion() {
-	// 	if (prompt == '') {
-	// 		return;
-	// 	}
-	// 	const response: Promise<Response> = postChatGptQuestion(game_name, prompt);
-	// 	readGame();
-	// }
+	function shuffle_tiles() {
+		letter_order = shuffle_array(letter_order);
+	}
 </script>
 
 <main>
 	<h2>
 		Round: {round_count}
 	</h2>
-	<Tiles {current_letters}></Tiles>
+	<Tiles {current_letters} {letter_order}></Tiles>
+	<div>
+		<Button text="Shuffle" onClick={shuffle_tiles} />
+	</div>
 	<div style="padding-top: 50px">
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
@@ -81,6 +97,14 @@
 	<div style="padding-bottom: 50px">
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>
+
+	<hr />
+	<h3>Waiting on players...</h3>
+	{#each waiting_for as player}
+		<div>
+			{player}
+		</div>
+	{/each}
 
 	{#if round_count == 1}
 		<hr />
@@ -91,12 +115,6 @@
 			</div>
 		{/each}
 	{/if}
-	<!-- <div>
-		<InputField bind:value={prompt} text="enter Mr. GPT prompt" />
-	</div> -->
-	<!-- <div>
-		<Button text="Get Mr. GPT question" onClick={onMrGptQuestion} />
-	</div> -->
 </main>
 
 <style>

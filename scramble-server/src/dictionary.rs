@@ -4,7 +4,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use rand::distributions::{Distribution, WeightedIndex};
+use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 
 struct Tile {
@@ -61,19 +61,6 @@ const TILES: [Tile; 26] = [
     new_tile!('Z', 10, 1),
 ];
 
-pub(crate) fn get_random_letters(size: usize) -> Vec<char> {
-    let counts: Vec<u32> = TILES.iter().map(|tile| tile.count).collect();
-    let distribution = WeightedIndex::new(counts).unwrap();
-    let mut rng = rand::thread_rng();
-
-    let chosen_indices: Vec<usize> = distribution.sample_iter(&mut rng).take(size).collect();
-
-    chosen_indices
-        .into_iter()
-        .map(|index| TILES[index].letter)
-        .collect()
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WordInfo {
     pub word: String,
@@ -84,16 +71,34 @@ pub struct WordInfo {
 pub struct Dictionary {
     playable_words: HashMap<String, WordInfo>,
     letter_scores: HashMap<char, u32>,
+    all_tiles: Vec<char>,
 }
 
 impl Dictionary {
     pub fn new(path: &str) -> Self {
+        let all_tiles = TILES
+            .iter()
+            .flat_map(|tile| vec![tile.letter; tile.count as usize])
+            .collect();
         let mut words = Self {
             playable_words: HashMap::new(),
             letter_scores: TILES.iter().map(|t| (t.letter, t.points)).collect(),
+            all_tiles,
         };
         words.playable_words = words.read_words(path);
         words
+    }
+
+    pub(crate) fn get_random_letters(&self, size: usize) -> Vec<char> {
+        let mut rng = thread_rng();
+        loop {
+            let mut all_tiles = self.all_tiles.clone();
+            all_tiles.shuffle(&mut rng);
+            all_tiles.truncate(size);
+            if self.has_playable_word(&all_tiles) {
+                return all_tiles;
+            }
+        }
     }
 
     pub fn get_word_info_if_playable(&self, s: &str) -> Option<&WordInfo> {
@@ -170,6 +175,12 @@ impl Dictionary {
         best_words.truncate(num_words);
         best_words
     }
+
+    fn has_playable_word(&self, letters: &[char]) -> bool {
+        self.playable_words
+            .iter()
+            .any(|(word, _)| Self::check_word_uses_letters(letters, word))
+    }
 }
 
 #[test]
@@ -185,4 +196,27 @@ fn test_best_words() {
     for value in words.get_best_words(&['R', 'E', 'M', 'O', 'R', 'S', 'E'], 5) {
         println!("{:?}", value);
     }
+}
+
+#[test]
+fn test_scrabble_probability() {
+    let words = Dictionary::new("word-list.txt");
+    let n = 10;
+    let mut scrabbles = 0;
+    let mut no_words = 0;
+    for _ in 0..n {
+        let letters = words.get_random_letters(7);
+        let best_words = words.get_best_words(&letters, 1);
+        if let Some(best_word) = best_words.first() {
+            println!("best word len: {}", best_word.word.len());
+            if best_word.word.len() == 7 {
+                println!("{letters:?}: {best_word:?}");
+                scrabbles += 1;
+            }
+        } else {
+            println!("no words from {letters:?}");
+            no_words += 1;
+        }
+    }
+    println!("{scrabbles} / {n} scrabbles\n{no_words} / {n} no words");
 }

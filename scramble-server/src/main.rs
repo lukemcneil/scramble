@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Mutex;
 
-use dictionary::{get_random_letters, Dictionary};
+use dictionary::Dictionary;
 use rocket::config::LogLevel;
 use rocket::http::Method;
 use rocket_cors::{AllowedOrigins, CorsOptions};
@@ -54,7 +54,7 @@ fn answer(
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     game.answer(answer.into_inner(), dictionary)?;
-    game.add_round_if_complete(get_random_letters(7), &dictionary);
+    game.add_round_if_complete(dictionary.get_random_letters(7), &dictionary);
     Ok(())
 }
 

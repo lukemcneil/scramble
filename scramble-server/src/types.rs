@@ -10,7 +10,7 @@ use std::{
     fmt,
 };
 
-use crate::dictionary::{get_random_letters, Dictionary, WordInfo};
+use crate::dictionary::{Dictionary, WordInfo};
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
 // Convert our custom Error type into HTTP responses
@@ -266,7 +266,7 @@ impl Games {
             Err(Error::GameConflict)
         } else {
             let mut game = Game::default();
-            game.add_round(get_random_letters(7), dictionary);
+            game.add_round(dictionary.get_random_letters(7), dictionary);
             game.add_player(initial_player)?;
             self.0.insert(game_id, game);
             Ok(())

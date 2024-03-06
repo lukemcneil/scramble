@@ -3,9 +3,10 @@
 	import { tileScores } from './tileScores';
 
 	export let letter;
+	export let background_color: string;
 </script>
 
-<div class="tile">
+<div class="tile" style="--background_color:{background_color}">
 	<span>{letter.toUpperCase()}</span>
 	<span class="score">{tileScores.get(letter.toUpperCase())}</span>
 </div>
@@ -20,7 +21,7 @@
 		align-items: center;
 		font-size: 24px; /* Bigger font size for the letter */
 		font-weight: bold;
-		background-color: #f9f9f9; /* Default background color */
+		background-color: var(--background_color); /* Default background color */
 		color: #333; /* Default text color */
 		border-radius: 5px;
 		position: relative;

@@ -17,7 +17,10 @@
 			on:click={() => window.alert(answer.answer + ': ' + answer.definition)}>define</button
 		>
 	{/if}
-	<Tiles current_letters={answer.answer.split('')}></Tiles>
+	<Tiles
+		current_letters={answer.answer.split('')}
+		background_color={answer.score == 0 ? 'lightcoral' : 'lightgreen'}
+	></Tiles>
 </div>
 
 <style>

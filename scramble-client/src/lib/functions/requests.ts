@@ -1,15 +1,17 @@
-import type { Guess } from '$lib/datatypes/guess';
-
 function getBaseServerPath(): string | null {
 	return localStorage.getItem('base_server_path');
 }
 
-export async function putCreateGame(game_name: string, name: string) {
+export async function putCreateGame(game_name: string, name: string, number_of_tiles: number, number_of_lookups: number) {
 	const response: Response = await fetch(localStorage.getItem('base_server_path') + game_name, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
-			player: name
+			player: name,
+			settings: {
+				number_of_tiles,
+				number_of_lookups,
+			}
 		})
 	});
 	return response;

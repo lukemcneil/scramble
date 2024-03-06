@@ -10,7 +10,7 @@ use rocket::config::LogLevel;
 use rocket::http::Method;
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use structopt::StructOpt;
-use types::{Game, Games, Player};
+use types::{CreateGameData, Game, Games, Player};
 
 use crate::types::{Answer, PlayerData, Result};
 use rocket::serde::json::Json;
@@ -19,15 +19,20 @@ use rocket::{Config, State};
 #[macro_use]
 extern crate rocket;
 
-#[put("/game/<game_id>", data = "<player>")]
+#[put("/game/<game_id>", data = "<create_game_data>")]
 fn create_game(
     game_id: &str,
-    player: Json<PlayerData>,
+    create_game_data: Json<CreateGameData>,
     games: &State<Mutex<Games>>,
     dictionary: &State<Dictionary>,
 ) -> Result<()> {
     let mut games = games.lock().unwrap();
-    games.create(game_id.to_string(), player.into_inner().player, dictionary)
+    games.create(
+        game_id.to_string(),
+        create_game_data.player.clone(),
+        dictionary,
+        create_game_data.settings.clone(),
+    )
 }
 
 #[post("/game/<game_id>", data = "<player>")]
@@ -54,7 +59,10 @@ fn answer(
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     game.answer(answer.into_inner(), dictionary)?;
-    game.add_round_if_complete(dictionary.get_random_letters(7), dictionary);
+    game.add_round_if_complete(
+        dictionary.get_random_letters(game.settings.number_of_tiles as usize),
+        dictionary,
+    );
     Ok(())
 }
 

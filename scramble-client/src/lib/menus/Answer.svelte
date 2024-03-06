@@ -6,6 +6,7 @@
 	import { sleep } from '$lib/functions/helper';
 	import Tiles from './Tiles.svelte';
 	import type { Round } from '$lib/datatypes/round';
+	import type { Game } from '$lib/datatypes/game';
 
 	export let setGameState: (new_state: string) => void;
 	export let name: string | null;
@@ -18,6 +19,7 @@
 	let error_message: String = '';
 	let waiting_for: Array<string> = [];
 	let lookups_used: number = 0;
+	let lookups_allowed: number = 2;
 
 	let answer: string = '';
 
@@ -38,7 +40,7 @@
 	async function readGame() {
 		getGame(game_name)
 			.then((response) => response.json())
-			.then((data) => {
+			.then((data: Game) => {
 				let current_round: Round = data.rounds[data.rounds.length - 1];
 				players = data.players;
 				current_letters = current_round.letters;
@@ -52,6 +54,7 @@
 				if (name && current_round.lookups_used.hasOwnProperty(name)) {
 					lookups_used = current_round.lookups_used[name];
 				}
+				lookups_allowed = data.settings.number_of_lookups;
 			});
 	}
 
@@ -99,7 +102,7 @@
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
 	<div>{error_message}</div>
-	<div>Lookups used: {lookups_used}</div>
+	<div>Lookups left: {lookups_allowed - lookups_used}</div>
 	<div style="padding-bottom: 50px">
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>

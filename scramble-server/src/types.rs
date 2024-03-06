@@ -38,6 +38,7 @@ pub(crate) enum Error {
     RoundNotInCollectingAnswersState,
     WordNotInDictionary,
     WordUsesExtraLetters,
+    InvalidGameSettings,
 }
 
 impl fmt::Display for Error {
@@ -53,6 +54,7 @@ impl fmt::Display for Error {
             }
             Self::WordNotInDictionary => write!(f, "word was not in dictionary"),
             Self::WordUsesExtraLetters => write!(f, "word uses extra letters"),
+            Self::InvalidGameSettings => write!(f, "invalid game settings"),
         }
     }
 }
@@ -76,6 +78,14 @@ impl BadRequest {
 pub(crate) struct PlayerData {
     /// The player with which the request is associated
     pub(crate) player: Player,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct CreateGameData {
+    /// The player with which the request is associated
+    pub(crate) player: Player,
+    /// The settings to create the game with
+    pub(crate) settings: GameSettings,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -140,12 +150,37 @@ impl Round {
     }
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+pub(crate) struct GameSettings {
+    /// The number of tiles to make words from
+    pub(crate) number_of_tiles: u32,
+    /// The number of lookups allowed before forfeiting turn
+    pub(crate) number_of_lookups: u32,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        Self {
+            number_of_tiles: 7,
+            number_of_lookups: 2,
+        }
+    }
+}
+
+impl GameSettings {
+    fn is_valid(&self) -> bool {
+        self.number_of_tiles >= 2 && self.number_of_lookups >= 1
+    }
+}
+
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Game {
     /// The list of players in the game
     pub(crate) players: HashSet<String>,
     /// The list of rounds in the game with the most recent round being the last item in the list
     pub(crate) rounds: Vec<Round>,
+    /// The settings for the game
+    pub(crate) settings: GameSettings,
 }
 
 impl Game {
@@ -183,6 +218,7 @@ impl Game {
             return Err(Error::RoundNotInCollectingAnswersState);
         }
 
+        let number_of_lookups = self.settings.number_of_lookups;
         let round = self.current_round_mut();
         // Check if this player already added an answer
         for a in &round.answers {
@@ -211,7 +247,7 @@ impl Game {
             None => {
                 let lookups_used = round.lookups_used.entry(player.clone()).or_default();
                 *lookups_used += 1;
-                if *lookups_used == 2 {
+                if *lookups_used == number_of_lookups {
                     let empty_answer = AnswerWithWordInfo {
                         player: answer.player,
                         answer: String::from(""),
@@ -277,12 +313,22 @@ impl Games {
         game_id: String,
         initial_player: Player,
         dictionary: &Dictionary,
+        settings: GameSettings,
     ) -> Result<()> {
         if self.0.contains_key(&game_id) {
             Err(Error::GameConflict)
         } else {
-            let mut game = Game::default();
-            game.add_round(dictionary.get_random_letters(7), dictionary);
+            if !settings.is_valid() {
+                return Err(Error::InvalidGameSettings);
+            }
+            let mut game = Game {
+                settings,
+                ..Default::default()
+            };
+            game.add_round(
+                dictionary.get_random_letters(game.settings.number_of_tiles as usize),
+                dictionary,
+            );
             game.add_player(initial_player)?;
             self.0.insert(game_id, game);
             Ok(())

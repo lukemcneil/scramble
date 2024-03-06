@@ -5,7 +5,7 @@
 	export let letter_order: Array<number> | null = null;
 </script>
 
-<div style="display: flex; justify-content: center; padding-bottom: 10px">
+<div style="display: flex; flex-wrap: wrap; justify-content: center; padding-bottom: 10px">
 	{#if letter_order}
 		{#each letter_order as letter_index}
 			<Tile letter={current_letters[letter_index]}></Tile>

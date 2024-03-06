@@ -11,6 +11,8 @@
 	let no_name_error_message = 'no name';
 	let no_game_room_error_message = 'no game room name';
 	let game_already_exists_error_message = 'this game already exists';
+	let number_of_tiles: number = 7;
+	let number_of_lookups: number = 2;
 
 	async function onClickCreateGame() {
 		if (name == '') {
@@ -21,7 +23,12 @@
 			error_message = no_game_room_error_message;
 			return;
 		}
-		const response: Promise<Response> = putCreateGame(game_name, name);
+		const response: Promise<Response> = putCreateGame(
+			game_name,
+			name,
+			number_of_tiles,
+			number_of_lookups
+		);
 		response.then((response) => {
 			if (response.ok) {
 				localStorage.setItem('name', name);
@@ -72,6 +79,26 @@
 
 	<div>
 		<Button text="Create Game" onClick={onClickCreateGame} />
+	</div>
+
+	<h3>Create Game Settings</h3>
+	<div>
+		Tiles: <input
+			type="number"
+			bind:value={number_of_tiles}
+			min="2"
+			max="20"
+			style="width: 50px;"
+		/>
+	</div>
+	<div>
+		Lookups: <input
+			type="number"
+			bind:value={number_of_lookups}
+			min="1"
+			max="10"
+			style="width: 50px;"
+		/>
 	</div>
 
 	<div>

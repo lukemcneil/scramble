@@ -226,14 +226,13 @@ impl Game {
                 return Ok(());
             }
         }
+        // Check that the word is valid with the letters from this round
+        if !Dictionary::check_word_uses_letters(&round.letters, &answer.answer) {
+            return Err(Error::WordUsesExtraLetters);
+        }
         // Check if the word is playable
         match dictionary.get_word_info_if_playable(&answer.answer) {
             Some(word_info) => {
-                // Check that the word is valid with the letters from this round
-                if !Dictionary::check_word_uses_letters(&round.letters, &answer.answer) {
-                    return Err(Error::WordUsesExtraLetters);
-                }
-
                 let answer_with_info = AnswerWithWordInfo {
                     player: answer.player,
                     answer: answer.answer,

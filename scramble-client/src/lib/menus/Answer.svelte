@@ -24,6 +24,9 @@
 	let answer: string = '';
 
 	function onSubmitClick() {
+		if (answer == '') {
+			return;
+		}
 		const response: Promise<Response> = postAnswer(game_name, name, answer);
 		response.then((response) => {
 			if (response.ok) {

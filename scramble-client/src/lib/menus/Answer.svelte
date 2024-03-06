@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Button from '$lib/Button.svelte';
 	import InputField from '$lib/InputField.svelte';
-	import { Player } from '$lib/datatypes/player';
 	import { onMount } from 'svelte';
 	import { getGame, postAnswer } from '$lib/functions/requests';
 	import { sleep } from '$lib/functions/helper';
 	import Tiles from './Tiles.svelte';
+	import type { Round } from '$lib/datatypes/round';
 
 	export let setGameState: (new_state: string) => void;
 	export let name: string | null;
@@ -17,6 +17,7 @@
 	let round_count: number;
 	let error_message: String = '';
 	let waiting_for: Array<string> = [];
+	let lookups_used: number = 0;
 
 	let answer: string = '';
 
@@ -28,6 +29,7 @@
 			} else {
 				response.json().then((data) => {
 					error_message = data.message;
+					readGame().then(() => 1);
 				});
 			}
 		});
@@ -37,16 +39,19 @@
 		getGame(game_name)
 			.then((response) => response.json())
 			.then((data) => {
+				let current_round: Round = data.rounds[data.rounds.length - 1];
 				players = data.players;
-				current_letters = data.rounds[data.rounds.length - 1].letters;
+				current_letters = current_round.letters;
 				if (letter_order.length == 0) {
 					letter_order = new Array(current_letters.length).fill(null).map((_, i) => i);
 				}
 				round_count = data.rounds.length;
 				waiting_for = players.filter(
-					(player) =>
-						!data.rounds[data.rounds.length - 1].answers.some((answer) => answer.player === player)
+					(player) => !current_round.answers.some((answer) => answer.player === player)
 				);
+				if (name && current_round.lookups_used.hasOwnProperty(name)) {
+					lookups_used = current_round.lookups_used[name];
+				}
 			});
 	}
 
@@ -94,6 +99,7 @@
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
 	<div>{error_message}</div>
+	<div>Lookups used: {lookups_used}</div>
 	<div style="padding-bottom: 50px">
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>

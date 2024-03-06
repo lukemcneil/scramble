@@ -72,11 +72,16 @@
 		<div>
 			{answer.player}:
 			{wordScore(answer.answer)}
-			<button
-				style="padding: 1px 1px;"
-				on:click={() => window.alert(answer.answer + ': ' + answer.definition)}>define</button
-			>
-			<Tiles current_letters={answer.answer.split('')}></Tiles>
+
+			{#if answer.answer == ''}
+				<div>(used too many lookups)</div>
+			{:else}
+				<button
+					style="padding: 1px 1px;"
+					on:click={() => window.alert(answer.answer + ': ' + answer.definition)}>define</button
+				>
+				<Tiles current_letters={answer.answer.split('')}></Tiles>
+			{/if}
 		</div>
 	{/each}
 	<hr />

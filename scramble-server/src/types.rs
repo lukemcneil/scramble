@@ -51,7 +51,7 @@ impl fmt::Display for Error {
             Self::RoundNotInCollectingAnswersState => {
                 write!(f, "round not in collecting answer state")
             }
-            Self::WordNotInDictionary => write!(f, "word is not in dictionary"),
+            Self::WordNotInDictionary => write!(f, "word was not in dictionary"),
             Self::WordUsesExtraLetters => write!(f, "word uses extra letters"),
         }
     }
@@ -111,6 +111,8 @@ pub(crate) struct Round {
     pub(crate) letters: Vec<char>,
     /// The list of answers given, one per player
     pub(crate) answers: Vec<AnswerWithWordInfo>,
+    /// The number of lookups that a player has used
+    pub(crate) lookups_used: HashMap<Player, u32>,
     /// The list of best answers for this round
     pub(crate) best_answers: Vec<WordInfo>,
 }
@@ -120,6 +122,7 @@ impl Round {
         Round {
             letters: letters.clone(),
             answers: Vec::new(),
+            lookups_used: HashMap::new(),
             best_answers: dictionary.get_best_words(&letters, 5),
         }
     }
@@ -205,7 +208,22 @@ impl Game {
                 round.answers.push(answer_with_info);
                 Ok(())
             }
-            None => Err(Error::WordNotInDictionary),
+            None => {
+                let lookups_used = round.lookups_used.entry(player.clone()).or_default();
+                *lookups_used += 1;
+                if *lookups_used == 2 {
+                    let empty_answer = AnswerWithWordInfo {
+                        player: answer.player,
+                        answer: String::from(""),
+                        score: 0,
+                        definition: String::from(""),
+                    };
+                    round.answers.push(empty_answer);
+                    Ok(())
+                } else {
+                    Err(Error::WordNotInDictionary)
+                }
+            }
         }
     }
 
@@ -240,11 +258,9 @@ impl Game {
         for round in &self.rounds {
             for answer in round.answers.iter() {
                 let score = scores.entry(answer.player.clone()).or_insert(0);
-                let word_score = dictionary
-                    .get_word_info_if_playable(&answer.answer)
-                    .expect("answers should all be in dictionary")
-                    .score;
-                *score += word_score;
+                if let Some(word_info) = dictionary.get_word_info_if_playable(&answer.answer) {
+                    *score += word_info.score;
+                }
             }
         }
         scores

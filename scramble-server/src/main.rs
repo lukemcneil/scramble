@@ -27,7 +27,7 @@ fn create_game(
     dictionary: &State<Dictionary>,
 ) -> Result<()> {
     let mut games = games.lock().unwrap();
-    games.create(game_id.to_string(), player.into_inner().player, &dictionary)
+    games.create(game_id.to_string(), player.into_inner().player, dictionary)
 }
 
 #[post("/game/<game_id>", data = "<player>")]
@@ -54,7 +54,7 @@ fn answer(
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     game.answer(answer.into_inner(), dictionary)?;
-    game.add_round_if_complete(dictionary.get_random_letters(7), &dictionary);
+    game.add_round_if_complete(dictionary.get_random_letters(7), dictionary);
     Ok(())
 }
 

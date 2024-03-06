@@ -164,7 +164,7 @@ impl Dictionary {
             .playable_words
             .iter()
             .filter_map(|(word, info)| {
-                if Self::check_word_uses_letters(letters, &word) {
+                if Self::check_word_uses_letters(letters, word) {
                     Some(info.clone())
                 } else {
                     None

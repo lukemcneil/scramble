@@ -27,7 +27,7 @@
 		if (answer == '') {
 			return;
 		}
-		const response: Promise<Response> = postAnswer(game_name, name, answer);
+		const response: Promise<Response> = postAnswer(game_name, name, answer.trim());
 		response.then((response) => {
 			if (response.ok) {
 				setGameState('answer_wait');

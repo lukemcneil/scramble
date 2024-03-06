@@ -53,14 +53,6 @@
 		readGame();
 		getScores();
 	});
-
-	function wordScore(word: string) {
-		let sum = 0;
-		word.split('').forEach((c) => {
-			sum += tileScores.get(c.toUpperCase());
-		});
-		return sum;
-	}
 </script>
 
 <main>
@@ -71,17 +63,17 @@
 	{#each answers as answer}
 		<div>
 			{answer.player}:
-			{wordScore(answer.answer)}
+			{answer.score}
 
-			{#if answer.answer == ''}
-				<div>(used too many lookups)</div>
+			{#if answer.score == 0}
+				(not a word)
 			{:else}
 				<button
 					style="padding: 1px 1px;"
 					on:click={() => window.alert(answer.answer + ': ' + answer.definition)}>define</button
 				>
-				<Tiles current_letters={answer.answer.split('')}></Tiles>
 			{/if}
+			<Tiles current_letters={answer.answer.split('')}></Tiles>
 		</div>
 	{/each}
 	<hr />

@@ -249,7 +249,7 @@ impl Game {
                 if *lookups_used == number_of_lookups {
                     let empty_answer = AnswerWithWordInfo {
                         player: answer.player,
-                        answer: String::from(""),
+                        answer: answer.answer,
                         score: 0,
                         definition: String::from(""),
                     };

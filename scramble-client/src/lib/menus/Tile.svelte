@@ -13,9 +13,9 @@
 
 <style>
 	.tile {
-		width: 50px;
-		height: 50px;
-		border: 2px solid #333; /* Default border color */
+		width: 40px;
+		height: 40px;
+		/* border: 0px solid #333; */
 		display: flex;
 		justify-content: center;
 		align-items: center;
@@ -23,16 +23,16 @@
 		font-weight: bold;
 		background-color: var(--background_color); /* Default background color */
 		color: #333; /* Default text color */
-		border-radius: 5px;
+		/* border-radius: 3px; */
 		position: relative;
-		margin: 0 1px; /* Add margin to the left and right */
+		margin: 1px 1px; /* Add margin to the left and right */
 	}
 
 	.score {
 		position: absolute;
-		bottom: 3px;
-		right: 3px;
-		font-size: 14px;
+		bottom: 0px;
+		right: 0px;
+		font-size: 12px;
 		color: #333; /* Default score color */
 	}
 </style>

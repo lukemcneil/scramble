@@ -2,6 +2,7 @@
 	import Button from '$lib/Button.svelte';
 	import InputField from '$lib/InputField.svelte';
 	import { putCreateGame, postJoinGame } from '$lib/functions/requests';
+	import Tiles from './Tiles.svelte';
 
 	export let setGameState: (new_state: string) => void;
 	let name: string;
@@ -64,7 +65,9 @@
 </script>
 
 <main>
-	<h1>Scramble</h1>
+	<div style="padding: 20px;">
+		<Tiles current_letters={'Scramble'.split('')}></Tiles>
+	</div>
 	<div>
 		<InputField bind:value={name} text="enter your name" />
 	</div>

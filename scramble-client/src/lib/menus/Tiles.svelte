@@ -3,7 +3,7 @@
 
 	export let current_letters: Array<string>;
 	export let letter_order: Array<number> | null = null;
-	export let background_color: string = '#f9f9f9';
+	export let background_color: string = '#E3CFAA';
 </script>
 
 <div style="display: flex; flex-wrap: wrap; justify-content: center; padding-bottom: 10px">

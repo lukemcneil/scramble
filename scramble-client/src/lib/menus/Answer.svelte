@@ -101,7 +101,7 @@
 	<div>
 		<Button text="Shuffle" onClick={shuffle_tiles} />
 	</div>
-	<div style="padding-top: 50px">
+	<div style="padding-top: 30px">
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
 	<div>{error_message}</div>

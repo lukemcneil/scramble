@@ -87,7 +87,11 @@
 			game_name={localStorage.getItem('game_name')}
 		/>
 	{:else if game_state == 'answer_wait'}
-		<AnswerWait {setGameState} game_name={localStorage.getItem('game_name')} />
+		<AnswerWait
+			{setGameState}
+			name={localStorage.getItem('name')}
+			game_name={localStorage.getItem('game_name')}
+		/>
 	{:else if game_state == 'results'}
 		<Results
 			{setGameState}

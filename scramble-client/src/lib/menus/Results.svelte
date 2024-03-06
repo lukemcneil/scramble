@@ -4,8 +4,8 @@
 	import { onMount } from 'svelte';
 	import { getGame, getScore } from '$lib/functions/requests';
 	import Tiles from './Tiles.svelte';
-	import { tileScores } from './tileScores';
 	import type { WordInfo } from '$lib/datatypes/wordInfo';
+	import PlayersAnswer from './PlayersAnswer.svelte';
 
 	export let setGameState: (new_state: string) => void;
 	export let name: string | null;
@@ -44,7 +44,7 @@
 				answers.forEach((answer: Answer) => {
 					correct_answer_map.set(answer.player, answer.answer);
 				});
-				answers = answers.sort((a1, a2) => wordScore(a2.answer) - wordScore(a1.answer));
+				answers = answers.sort((a1, a2) => a2.score - a1.score);
 				my_answer = correct_answer_map.get(name);
 			});
 	}
@@ -61,20 +61,7 @@
 	<hr />
 	<h3>Answers</h3>
 	{#each answers as answer}
-		<div>
-			{answer.player}:
-			{answer.score}
-
-			{#if answer.score == 0}
-				(not a word)
-			{:else}
-				<button
-					style="padding: 1px 1px;"
-					on:click={() => window.alert(answer.answer + ': ' + answer.definition)}>define</button
-				>
-			{/if}
-			<Tiles current_letters={answer.answer.split('')}></Tiles>
-		</div>
+		<PlayersAnswer {answer}></PlayersAnswer>
 	{/each}
 	<hr />
 	<h3>Best Answers</h3>

@@ -6,6 +6,7 @@
 	import Tiles from './Tiles.svelte';
 	import type { WordInfo } from '$lib/datatypes/wordInfo';
 	import PlayersAnswer from './PlayersAnswer.svelte';
+	import { sleep } from '$lib/functions/helper';
 
 	export let setGameState: (new_state: string) => void;
 	export let name: string | null;
@@ -49,8 +50,17 @@
 			});
 	}
 
+	let get_game_interval_ms: number = 1000;
+	async function getGameLoop() {
+		if (localStorage.getItem('game_state') == 'results') {
+			readGame();
+			await sleep(get_game_interval_ms);
+			getGameLoop();
+		}
+	}
+
 	onMount(() => {
-		readGame();
+		getGameLoop();
 		getScores();
 	});
 </script>

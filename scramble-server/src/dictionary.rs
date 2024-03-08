@@ -5,6 +5,7 @@ use std::{
 };
 
 use rand::{seq::SliceRandom, thread_rng};
+use rocket::tokio;
 use serde::{Deserialize, Serialize};
 
 struct Tile {
@@ -159,18 +160,20 @@ impl Dictionary {
         true
     }
 
-    pub fn get_best_words(&self, letters: &[char], num_words: usize) -> Vec<WordInfo> {
-        let mut best_words: Vec<WordInfo> = self
-            .playable_words
-            .iter()
-            .filter_map(|(word, info)| {
-                if Self::check_word_uses_letters(letters, word) {
-                    Some(info.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
+    pub async fn get_best_words(&self, letters: &[char], num_words: usize) -> Vec<WordInfo> {
+        let mut best_words: Vec<WordInfo> = Vec::new();
+
+        let mut i = 0;
+        for (word, info) in &self.playable_words {
+            i += 1;
+            if i == 1000 {
+                i = 0;
+                tokio::task::yield_now().await;
+            }
+            if Self::check_word_uses_letters(letters, word) {
+                best_words.push(info.clone());
+            }
+        }
         best_words.sort_by(|a, b| b.score.cmp(&a.score));
         best_words.truncate(num_words);
         best_words
@@ -190,16 +193,19 @@ fn test_read_words() {
     assert!(words.get_word_info_if_playable("notaword").is_none());
 }
 
-#[test]
-fn test_best_words() {
+#[tokio::test]
+async fn test_best_words() {
     let words = Dictionary::new("word-list.txt");
-    for value in words.get_best_words(&['R', 'E', 'M', 'O', 'R', 'S', 'E'], 5) {
+    for value in words
+        .get_best_words(&['R', 'E', 'M', 'O', 'R', 'S', 'E'], 5)
+        .await
+    {
         println!("{:?}", value);
     }
 }
 
-#[test]
-fn test_scrabble_probability() {
+#[tokio::test]
+async fn test_scrabble_probability() {
     let words = Dictionary::new("word-list.txt");
     let n = 10;
     let mut scrabbles = 0;
@@ -207,7 +213,7 @@ fn test_scrabble_probability() {
     for _ in 0..n {
         let letters = words.get_random_letters(7);
         let best_words = words.get_best_words(&letters, 1);
-        if let Some(best_word) = best_words.first() {
+        if let Some(best_word) = best_words.await.first() {
             println!("best word len: {}", best_word.word.len());
             if best_word.word.len() == 7 {
                 println!("{letters:?}: {best_word:?}");

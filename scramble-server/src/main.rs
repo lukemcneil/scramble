@@ -120,7 +120,7 @@ async fn get_best_words_for_round(
     game_id: String,
     round_number: usize,
 ) -> Option<()> {
-    let best_answers = dictionary.get_best_words(&tiles, 5);
+    let best_answers = dictionary.get_best_words(&tiles, 5).await;
     let mut games = games.lock().unwrap();
     let game = games.get(&game_id).ok()?;
     let round = game.rounds.get_mut(round_number)?;

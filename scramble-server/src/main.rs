@@ -3,7 +3,7 @@ mod types;
 
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use dictionary::Dictionary;
 use rocket::config::LogLevel;
@@ -14,7 +14,7 @@ use types::{CreateGameData, Game, Games, Player};
 
 use crate::types::{Answer, PlayerData, Result};
 use rocket::serde::json::Json;
-use rocket::{Config, State};
+use rocket::{tokio, Config, State};
 
 #[macro_use]
 extern crate rocket;
@@ -23,27 +23,39 @@ extern crate rocket;
 fn create_game(
     game_id: &str,
     create_game_data: Json<CreateGameData>,
-    games: &State<Mutex<Games>>,
-    dictionary: &State<Dictionary>,
+    games_state: &State<Arc<Mutex<Games>>>,
+    dictionary: &State<Arc<Dictionary>>,
 ) -> Result<()> {
-    let mut games = games.lock().unwrap();
+    let mut games = games_state.lock().unwrap();
+    let tiles = dictionary.get_random_letters(create_game_data.settings.number_of_tiles as usize);
     games.create(
         game_id.to_string(),
         create_game_data.player.clone(),
-        dictionary,
         create_game_data.settings.clone(),
-    )
+        tiles.clone(),
+    )?;
+    let dictionary_clone = dictionary.inner().clone();
+    let games_state_clone = games_state.inner().clone();
+    let game_id_clone = game_id.to_string();
+    tokio::spawn(async move {
+        get_best_words_for_round(dictionary_clone, tiles, games_state_clone, game_id_clone, 0).await
+    });
+    Ok(())
 }
 
 #[post("/game/<game_id>", data = "<player>")]
-fn join_game(game_id: &str, player: Json<PlayerData>, games: &State<Mutex<Games>>) -> Result<()> {
+fn join_game(
+    game_id: &str,
+    player: Json<PlayerData>,
+    games: &State<Arc<Mutex<Games>>>,
+) -> Result<()> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     game.add_player(player.into_inner().player)
 }
 
 #[get("/game/<game_id>")]
-fn game(game_id: &str, games: &State<Mutex<Games>>) -> Result<Json<Game>> {
+fn game(game_id: &str, games: &State<Arc<Mutex<Games>>>) -> Result<Json<Game>> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     Ok(Json(game.clone()))
@@ -53,28 +65,39 @@ fn game(game_id: &str, games: &State<Mutex<Games>>) -> Result<Json<Game>> {
 fn answer(
     game_id: &str,
     answer: Json<Answer>,
-    games: &State<Mutex<Games>>,
-    dictionary: &State<Dictionary>,
+    games_state: &State<Arc<Mutex<Games>>>,
+    dictionary: &State<Arc<Dictionary>>,
 ) -> Result<()> {
-    let mut games = games.lock().unwrap();
+    let mut games = games_state.lock().unwrap();
     let game = games.get(game_id)?;
     game.answer(answer.into_inner(), dictionary)?;
-    game.add_round_if_complete(
-        dictionary.get_random_letters(game.settings.number_of_tiles as usize),
-        dictionary,
-    );
+    let tiles = dictionary.get_random_letters(game.settings.number_of_tiles as usize);
+    if game.add_round_if_complete(tiles.clone()) {
+        let dictionary_clone = dictionary.inner().clone();
+        let games_state_clone = games_state.inner().clone();
+        let game_id_clone = game_id.to_string();
+        let i = game.rounds.len() - 1;
+        tokio::spawn(async move {
+            get_best_words_for_round(dictionary_clone, tiles, games_state_clone, game_id_clone, i)
+                .await
+        });
+    }
     Ok(())
 }
 
 #[delete("/game/<game_id>/exit", data = "<player>")]
-fn exit_game(game_id: &str, player: Json<PlayerData>, games: &State<Mutex<Games>>) -> Result<()> {
+fn exit_game(
+    game_id: &str,
+    player: Json<PlayerData>,
+    games: &State<Arc<Mutex<Games>>>,
+) -> Result<()> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?;
     game.remove_player(player.into_inner().player)
 }
 
 #[delete("/game/<game_id>")]
-fn delete_game(game_id: &str, games: &State<Mutex<Games>>) {
+fn delete_game(game_id: &str, games: &State<Arc<Mutex<Games>>>) {
     let mut games = games.lock().unwrap();
     games.delete(game_id)
 }
@@ -82,12 +105,27 @@ fn delete_game(game_id: &str, games: &State<Mutex<Games>>) {
 #[get("/game/<game_id>/score")]
 fn get_score(
     game_id: &str,
-    games: &State<Mutex<Games>>,
-    dictionary: &State<Dictionary>,
+    games: &State<Arc<Mutex<Games>>>,
+    dictionary: &State<Arc<Dictionary>>,
 ) -> Result<Json<HashMap<Player, u32>>> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?.clone();
     Ok(Json(game.get_score(dictionary)))
+}
+
+async fn get_best_words_for_round(
+    dictionary: Arc<Dictionary>,
+    tiles: Vec<char>,
+    games: Arc<Mutex<Games>>,
+    game_id: String,
+    round_number: usize,
+) -> Option<()> {
+    let best_answers = dictionary.get_best_words(&tiles, 5);
+    let mut games = games.lock().unwrap();
+    let game = games.get(&game_id).ok()?;
+    let round = game.rounds.get_mut(round_number)?;
+    round.best_answers = best_answers;
+    Some(())
 }
 
 #[derive(Debug, StructOpt)]
@@ -147,6 +185,6 @@ fn rocket() -> _ {
                 get_score
             ],
         )
-        .manage(Mutex::new(Games::default()))
-        .manage(Dictionary::new("word-list.txt"))
+        .manage(Arc::new(Mutex::new(Games::default())))
+        .manage(Arc::new(Dictionary::new("word-list.txt")))
 }

@@ -128,12 +128,12 @@ pub(crate) struct Round {
 }
 
 impl Round {
-    fn new(letters: Vec<char>, dictionary: &Dictionary) -> Self {
+    fn new(letters: Vec<char>) -> Self {
         Round {
             letters: letters.clone(),
             answers: Vec::new(),
             lookups_used: HashMap::new(),
-            best_answers: dictionary.get_best_words(&letters, 5),
+            best_answers: Vec::new(),
         }
     }
 
@@ -262,14 +262,17 @@ impl Game {
         }
     }
 
-    pub(crate) fn add_round_if_complete(&mut self, letters: Vec<char>, dictionary: &Dictionary) {
+    pub(crate) fn add_round_if_complete(&mut self, letters: Vec<char>) -> bool {
         if self.current_round_state() == RoundState::Complete {
-            self.add_round(letters, dictionary);
+            self.add_round(letters);
+            true
+        } else {
+            false
         }
     }
 
-    fn add_round(&mut self, letters: Vec<char>, dictionary: &Dictionary) {
-        self.rounds.push(Round::new(letters, dictionary));
+    fn add_round(&mut self, letters: Vec<char>) {
+        self.rounds.push(Round::new(letters));
     }
 
     pub(crate) fn current_round(&self) -> &Round {
@@ -311,8 +314,8 @@ impl Games {
         &mut self,
         game_id: String,
         initial_player: Player,
-        dictionary: &Dictionary,
         settings: GameSettings,
+        letters: Vec<char>,
     ) -> Result<()> {
         if self.0.contains_key(&game_id) {
             Err(Error::GameConflict)
@@ -324,10 +327,7 @@ impl Games {
                 settings,
                 ..Default::default()
             };
-            game.add_round(
-                dictionary.get_random_letters(game.settings.number_of_tiles as usize),
-                dictionary,
-            );
+            game.add_round(letters);
             game.add_player(initial_player)?;
             self.0.insert(game_id, game);
             Ok(())
@@ -347,13 +347,13 @@ impl Games {
 fn test_get_score() -> Result<()> {
     let mut game = Game::default();
     let dictionary = Dictionary::new("word-list.txt");
-    game.add_round(vec!['S', 'C', 'R', 'A', 'M', 'B', 'L', 'E'], &dictionary);
+    game.add_round(vec!['S', 'C', 'R', 'A', 'M', 'B', 'L', 'E']);
     game.add_player(String::from("test"))?;
     assert!(game
         .answer(
             Answer {
                 player: String::from("test"),
-                answer: String::from("notaword"),
+                answer: String::from("scr"),
             },
             &dictionary,
         )

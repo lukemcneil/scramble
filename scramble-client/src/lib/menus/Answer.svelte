@@ -41,24 +41,28 @@
 	}
 
 	async function readGame() {
-		getGame(game_name)
-			.then((response) => response.json())
-			.then((data: Game) => {
-				let current_round: Round = data.rounds[data.rounds.length - 1];
-				players = data.players;
-				current_letters = current_round.letters;
-				if (letter_order.length == 0) {
-					letter_order = new Array(current_letters.length).fill(null).map((_, i) => i);
-				}
-				round_count = data.rounds.length;
-				waiting_for = players.filter(
-					(player) => !current_round.answers.some((answer) => answer.player === player)
-				);
-				if (name && current_round.lookups_used.hasOwnProperty(name)) {
-					lookups_used = current_round.lookups_used[name];
-				}
-				lookups_allowed = data.settings.number_of_lookups;
-			});
+		let response = await getGame(game_name);
+		let data = await response.json();
+		if (response.ok) {
+			let current_round: Round = data.rounds[data.rounds.length - 1];
+			players = data.players;
+			current_letters = current_round.letters;
+			if (letter_order.length == 0) {
+				letter_order = new Array(current_letters.length).fill(null).map((_, i) => i);
+			}
+			round_count = data.rounds.length;
+			waiting_for = players.filter(
+				(player) => !current_round.answers.some((answer) => answer.player === player)
+			);
+			if (name && current_round.lookups_used.hasOwnProperty(name)) {
+				lookups_used = current_round.lookups_used[name];
+			}
+			lookups_allowed = data.settings.number_of_lookups;
+		} else {
+			if (data.error == 'GameNotFound') {
+				setGameState('join');
+			}
+		}
 	}
 
 	let get_game_interval_ms: number = 1000;

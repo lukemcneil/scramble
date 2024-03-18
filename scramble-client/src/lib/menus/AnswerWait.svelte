@@ -19,29 +19,31 @@
 	let my_answer: Answer;
 
 	async function readGame() {
-		getGame(game_name)
-			.then((response) => response.json())
-			.then((data) => {
-				players = data.players;
-				current_letters = data.rounds[data.rounds.length - 1].letters;
-				round_count = data.rounds.length;
-				if (data.rounds[data.rounds.length - 1].answers.length == 0) {
-					setGameState('results');
-				} else {
-					waiting_for = players.filter(
-						(player) =>
-							!data.rounds[data.rounds.length - 1].answers.some(
-								(answer) => answer.player === player
-							)
-					);
-					answers = data.rounds[data.rounds.length - 1].answers;
-					answers.forEach((answer: Answer) => {
-						correct_answer_map.set(answer.player, answer);
-					});
-					answers = answers.sort((a1, a2) => a2.score - a1.score);
-					my_answer = correct_answer_map.get(name);
-				}
-			});
+		let response = await getGame(game_name);
+		let data = await response.json();
+		if (response.ok) {
+			players = data.players;
+			current_letters = data.rounds[data.rounds.length - 1].letters;
+			round_count = data.rounds.length;
+			if (data.rounds[data.rounds.length - 1].answers.length == 0) {
+				setGameState('results');
+			} else {
+				waiting_for = players.filter(
+					(player) =>
+						!data.rounds[data.rounds.length - 1].answers.some((answer) => answer.player === player)
+				);
+				answers = data.rounds[data.rounds.length - 1].answers;
+				answers.forEach((answer: Answer) => {
+					correct_answer_map.set(answer.player, answer);
+				});
+				answers = answers.sort((a1, a2) => a2.score - a1.score);
+				my_answer = correct_answer_map.get(name);
+			}
+		} else {
+			if (data.error == 'GameNotFound') {
+				setGameState('join');
+			}
+		}
 	}
 
 	let get_game_interval_ms: number = 1000;

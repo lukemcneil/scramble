@@ -35,19 +35,24 @@
 	}
 
 	async function readGame() {
-		getGame(game_name)
-			.then((response) => response.json())
-			.then((data) => {
-				current_letters = data.rounds[data.rounds.length - 2].letters;
-				answers = data.rounds[data.rounds.length - 2].answers;
-				best_answers = data.rounds[data.rounds.length - 2].best_answers;
+		let response = await getGame(game_name);
+		let data = await response.json();
 
-				answers.forEach((answer: Answer) => {
-					correct_answer_map.set(answer.player, answer.answer);
-				});
-				answers = answers.sort((a1, a2) => a2.score - a1.score);
-				my_answer = correct_answer_map.get(name);
+		if (response.ok) {
+			current_letters = data.rounds[data.rounds.length - 2].letters;
+			answers = data.rounds[data.rounds.length - 2].answers;
+			best_answers = data.rounds[data.rounds.length - 2].best_answers;
+
+			answers.forEach((answer: Answer) => {
+				correct_answer_map.set(answer.player, answer.answer);
 			});
+			answers = answers.sort((a1, a2) => a2.score - a1.score);
+			my_answer = correct_answer_map.get(name);
+		} else {
+			if (data.error == 'GameNotFound') {
+				setGameState('join');
+			}
+		}
 	}
 
 	let get_game_interval_ms: number = 1000;

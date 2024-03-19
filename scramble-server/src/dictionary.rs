@@ -186,14 +186,8 @@ impl Dictionary {
             }
         }
         best_words.sort_by(|a, b| {
-            let b_score = match scoring_method {
-                ScoringMethod::Normal => b.score,
-                ScoringMethod::Length => b.word.len() as u32,
-            };
-            let a_score = match scoring_method {
-                ScoringMethod::Normal => a.score,
-                ScoringMethod::Length => a.word.len() as u32,
-            };
+            let b_score = scoring_method.score(b);
+            let a_score = scoring_method.score(a);
             b_score.cmp(&a_score)
         });
         best_words.truncate(num_words);

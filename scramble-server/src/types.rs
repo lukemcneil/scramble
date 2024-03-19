@@ -182,6 +182,15 @@ pub(crate) enum ScoringMethod {
     Length,
 }
 
+impl ScoringMethod {
+    pub(crate) fn score(&self, word_info: &WordInfo) -> u32 {
+        match self {
+            ScoringMethod::Normal => word_info.score,
+            ScoringMethod::Length => word_info.word.len() as u32,
+        }
+    }
+}
+
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Game {
     /// The list of players in the game
@@ -243,10 +252,7 @@ impl Game {
         // Check if the word is playable
         match dictionary.get_word_info_if_playable(&answer.answer) {
             Some(word_info) => {
-                let score = match scoring_method {
-                    ScoringMethod::Normal => word_info.score,
-                    ScoringMethod::Length => word_info.word.len() as u32,
-                };
+                let score = scoring_method.score(word_info);
 
                 let answer_with_info = AnswerWithWordInfo {
                     player: answer.player,
@@ -316,10 +322,7 @@ impl Game {
             for answer in round.answers.iter() {
                 let score = scores.entry(answer.player.clone()).or_insert(0);
                 if let Some(word_info) = dictionary.get_word_info_if_playable(&answer.answer) {
-                    *score += match scoring_method {
-                        ScoringMethod::Normal => word_info.score,
-                        ScoringMethod::Length => word_info.word.len() as u32,
-                    }
+                    *score += scoring_method.score(word_info);
                 }
             }
         }

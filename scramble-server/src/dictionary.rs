@@ -170,13 +170,7 @@ impl Dictionary {
     ) -> Vec<WordInfo> {
         let mut best_words: Vec<WordInfo> = Vec::new();
 
-        let mut i = 0;
         for (word, info) in &self.playable_words {
-            i += 1;
-            if i == 1000 {
-                i = 0;
-                tokio::task::yield_now().await;
-            }
             if Self::check_word_uses_letters(letters, word) {
                 let mut info = info.clone();
                 if matches!(scoring_method, ScoringMethod::Length) {
@@ -184,6 +178,7 @@ impl Dictionary {
                 }
                 best_words.push(info);
             }
+            tokio::task::consume_budget().await;
         }
         best_words.sort_by(|a, b| {
             let b_score = scoring_method.score(b);

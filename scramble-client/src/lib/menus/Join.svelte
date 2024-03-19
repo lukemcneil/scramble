@@ -68,7 +68,7 @@
 
 <main>
 	<div style="padding: 20px;">
-		<Tiles current_letters={'Scramble'.split('')}></Tiles>
+		<Tiles current_letters={'Scramble'.split('')} show_score={scoring_method == 'Normal'}></Tiles>
 	</div>
 	<div>
 		<InputField bind:value={name} text="enter your name" />

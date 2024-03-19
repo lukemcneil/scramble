@@ -2,7 +2,7 @@ function getBaseServerPath(): string | null {
 	return localStorage.getItem('base_server_path');
 }
 
-export async function putCreateGame(game_name: string, name: string, number_of_tiles: number, number_of_lookups: number) {
+export async function putCreateGame(game_name: string, name: string, number_of_tiles: number, number_of_lookups: number, scoring_method: string) {
 	const response: Response = await fetch(localStorage.getItem('base_server_path') + game_name, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
@@ -11,6 +11,7 @@ export async function putCreateGame(game_name: string, name: string, number_of_t
 			settings: {
 				number_of_tiles,
 				number_of_lookups,
+				scoring_method,
 			}
 		})
 	});

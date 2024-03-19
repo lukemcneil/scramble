@@ -18,6 +18,7 @@
 	let my_answer: string;
 	let score_map: Map<string, number> = new Map();
 	let best_answers: Array<WordInfo> = [];
+	let show_score: boolean = true;
 
 	function onNextRoundClick() {
 		setGameState('answer');
@@ -48,6 +49,7 @@
 			});
 			answers = answers.sort((a1, a2) => a2.score - a1.score);
 			my_answer = correct_answer_map.get(name);
+			show_score = data.settings.scoring_method == 'Normal';
 		} else {
 			if (data.error == 'GameNotFound') {
 				setGameState('join');
@@ -72,11 +74,11 @@
 
 <main>
 	<h2>Results</h2>
-	<Tiles {current_letters}></Tiles>
+	<Tiles {current_letters} {show_score}></Tiles>
 	<hr />
 	<h3>Answers</h3>
 	{#each answers as answer}
-		<PlayersAnswer {answer}></PlayersAnswer>
+		<PlayersAnswer {answer} {show_score}></PlayersAnswer>
 	{/each}
 	<hr />
 	<h3>Best Answers</h3>

@@ -17,6 +17,7 @@
 	let answers: Array<Answer> = [];
 	let correct_answer_map: Map<string, Answer> = new Map();
 	let my_answer: Answer;
+	let show_score: boolean = true;
 
 	async function readGame() {
 		let response = await getGame(game_name);
@@ -25,6 +26,7 @@
 			players = data.players;
 			current_letters = data.rounds[data.rounds.length - 1].letters;
 			round_count = data.rounds.length;
+			show_score = data.settings.scoring_method == 'Normal';
 			if (data.rounds[data.rounds.length - 1].answers.length == 0) {
 				setGameState('results');
 			} else {
@@ -64,11 +66,11 @@
 	<h2>
 		Round: {round_count}
 	</h2>
-	<Tiles {current_letters}></Tiles>
+	<Tiles {current_letters} {show_score}></Tiles>
 	<hr />
 	<h3>Your Answer</h3>
 	{#if my_answer}
-		<PlayersAnswer answer={my_answer}></PlayersAnswer>
+		<PlayersAnswer answer={my_answer} {show_score}></PlayersAnswer>
 	{/if}
 	<hr />
 	<h3>Waiting on players...</h3>

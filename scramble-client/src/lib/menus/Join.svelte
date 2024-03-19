@@ -14,6 +14,7 @@
 	let game_already_exists_error_message = 'this game already exists';
 	let number_of_tiles: number = 7;
 	let number_of_lookups: number = 2;
+	let scoring_method: string = 'Normal';
 
 	async function onClickCreateGame() {
 		if (name == '') {
@@ -28,7 +29,8 @@
 			game_name,
 			name,
 			number_of_tiles,
-			number_of_lookups
+			number_of_lookups,
+			scoring_method
 		);
 		response.then((response) => {
 			if (response.ok) {
@@ -103,7 +105,13 @@
 			style="width: 50px;"
 		/>
 	</div>
-
+	<div>
+		Scoring Method:
+		{#each ['Normal', 'Length'] as x}
+			<input type="radio" name="scoring_method" value={x} bind:group={scoring_method} />
+			{x}
+		{/each}
+	</div>
 	<div>
 		<div>
 			{error_message}

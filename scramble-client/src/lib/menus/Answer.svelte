@@ -20,6 +20,7 @@
 	let waiting_for: Array<string> = [];
 	let lookups_used: number = 0;
 	let lookups_allowed: number = 2;
+	let show_score: boolean = true;
 
 	let answer: string = '';
 
@@ -58,6 +59,7 @@
 				lookups_used = current_round.lookups_used[name];
 			}
 			lookups_allowed = data.settings.number_of_lookups;
+			show_score = data.settings.scoring_method == 'Normal';
 		} else {
 			if (data.error == 'GameNotFound') {
 				setGameState('join');
@@ -101,7 +103,7 @@
 	<h2>
 		Round: {round_count}
 	</h2>
-	<Tiles {current_letters} {letter_order}></Tiles>
+	<Tiles {current_letters} {letter_order} {show_score}></Tiles>
 	<div>
 		<Button text="Shuffle" onClick={shuffle_tiles} />
 	</div>

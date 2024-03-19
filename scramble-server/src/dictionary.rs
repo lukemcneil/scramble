@@ -8,6 +8,8 @@ use rand::{seq::SliceRandom, thread_rng};
 use rocket::tokio;
 use serde::{Deserialize, Serialize};
 
+use crate::types::ScoringMethod;
+
 struct Tile {
     letter: char,
     points: u32,
@@ -160,7 +162,12 @@ impl Dictionary {
         true
     }
 
-    pub async fn get_best_words(&self, letters: &[char], num_words: usize) -> Vec<WordInfo> {
+    pub async fn get_best_words(
+        &self,
+        letters: &[char],
+        num_words: usize,
+        scoring_method: &ScoringMethod,
+    ) -> Vec<WordInfo> {
         let mut best_words: Vec<WordInfo> = Vec::new();
 
         let mut i = 0;
@@ -171,10 +178,24 @@ impl Dictionary {
                 tokio::task::yield_now().await;
             }
             if Self::check_word_uses_letters(letters, word) {
-                best_words.push(info.clone());
+                let mut info = info.clone();
+                if matches!(scoring_method, ScoringMethod::Length) {
+                    info.score = info.word.len() as u32;
+                }
+                best_words.push(info);
             }
         }
-        best_words.sort_by(|a, b| b.score.cmp(&a.score));
+        best_words.sort_by(|a, b| {
+            let b_score = match scoring_method {
+                ScoringMethod::Normal => b.score,
+                ScoringMethod::Length => b.word.len() as u32,
+            };
+            let a_score = match scoring_method {
+                ScoringMethod::Normal => a.score,
+                ScoringMethod::Length => a.word.len() as u32,
+            };
+            b_score.cmp(&a_score)
+        });
         best_words.truncate(num_words);
         best_words
     }
@@ -197,7 +218,11 @@ fn test_read_words() {
 async fn test_best_words() {
     let words = Dictionary::new("word-list.txt");
     for value in words
-        .get_best_words(&['R', 'E', 'M', 'O', 'R', 'S', 'E'], 5)
+        .get_best_words(
+            &['R', 'E', 'M', 'O', 'R', 'S', 'E'],
+            5,
+            &ScoringMethod::Normal,
+        )
         .await
     {
         println!("{:?}", value);
@@ -212,7 +237,7 @@ async fn test_scrabble_probability() {
     let mut no_words = 0;
     for _ in 0..n {
         let letters = words.get_random_letters(7);
-        let best_words = words.get_best_words(&letters, 1);
+        let best_words = words.get_best_words(&letters, 1, &ScoringMethod::Normal);
         if let Some(best_word) = best_words.await.first() {
             println!("best word len: {}", best_word.word.len());
             if best_word.word.len() == 7 {

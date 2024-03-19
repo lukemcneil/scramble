@@ -4,11 +4,14 @@
 
 	export let letter;
 	export let background_color: string;
+	export let show_score: boolean = true;
 </script>
 
 <div class="tile" style="--background_color:{background_color}">
 	<span>{letter.toUpperCase()}</span>
-	<span class="score">{tileScores.get(letter.toUpperCase())}</span>
+	{#if show_score}
+		<span class="score">{tileScores.get(letter.toUpperCase())}</span>
+	{/if}
 </div>
 
 <style>

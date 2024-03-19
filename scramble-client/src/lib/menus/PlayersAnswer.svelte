@@ -3,6 +3,7 @@
 	import Tiles from './Tiles.svelte';
 
 	export let answer: Answer;
+	export let show_score: boolean;
 </script>
 
 <div>
@@ -20,6 +21,7 @@
 	<Tiles
 		current_letters={answer.answer.split('')}
 		background_color={answer.score == 0 ? 'lightcoral' : 'lightgreen'}
+		{show_score}
 	></Tiles>
 </div>
 

@@ -156,6 +156,8 @@ pub(crate) struct GameSettings {
     pub(crate) number_of_tiles: u32,
     /// The number of lookups allowed before forfeiting turn
     pub(crate) number_of_lookups: u32,
+    /// The method to score words
+    pub(crate) scoring_method: ScoringMethod,
 }
 
 impl Default for GameSettings {
@@ -163,6 +165,7 @@ impl Default for GameSettings {
         Self {
             number_of_tiles: 7,
             number_of_lookups: 2,
+            scoring_method: ScoringMethod::Normal,
         }
     }
 }
@@ -171,6 +174,12 @@ impl GameSettings {
     fn is_valid(&self) -> bool {
         self.number_of_tiles >= 2 && self.number_of_lookups >= 1
     }
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub(crate) enum ScoringMethod {
+    Normal,
+    Length,
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -219,6 +228,7 @@ impl Game {
         }
 
         let number_of_lookups = self.settings.number_of_lookups;
+        let scoring_method = self.settings.scoring_method.clone();
         let round = self.current_round_mut();
         // Check if this player already added an answer
         for a in &round.answers {
@@ -233,10 +243,15 @@ impl Game {
         // Check if the word is playable
         match dictionary.get_word_info_if_playable(&answer.answer) {
             Some(word_info) => {
+                let score = match scoring_method {
+                    ScoringMethod::Normal => word_info.score,
+                    ScoringMethod::Length => word_info.word.len() as u32,
+                };
+
                 let answer_with_info = AnswerWithWordInfo {
                     player: answer.player,
                     answer: answer.answer,
-                    score: word_info.score,
+                    score,
                     definition: word_info.definition.clone(),
                 };
                 // Add the answer with info
@@ -291,13 +306,20 @@ impl Game {
         round.state(players)
     }
 
-    pub fn get_score(&self, dictionary: &Dictionary) -> HashMap<String, u32> {
+    pub fn get_score(
+        &self,
+        dictionary: &Dictionary,
+        scoring_method: &ScoringMethod,
+    ) -> HashMap<String, u32> {
         let mut scores = HashMap::new();
         for round in &self.rounds {
             for answer in round.answers.iter() {
                 let score = scores.entry(answer.player.clone()).or_insert(0);
                 if let Some(word_info) = dictionary.get_word_info_if_playable(&answer.answer) {
-                    *score += word_info.score;
+                    *score += match scoring_method {
+                        ScoringMethod::Normal => word_info.score,
+                        ScoringMethod::Length => word_info.word.len() as u32,
+                    }
                 }
             }
         }
@@ -376,6 +398,9 @@ fn test_get_score() -> Result<()> {
     )?;
     let mut expected = HashMap::new();
     expected.insert(String::from("test"), 14);
-    assert_eq!(game.get_score(&dictionary), expected);
+    assert_eq!(
+        game.get_score(&dictionary, &ScoringMethod::Normal),
+        expected
+    );
     Ok(())
 }

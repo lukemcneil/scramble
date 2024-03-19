@@ -10,7 +10,7 @@ use rocket::config::LogLevel;
 use rocket::http::Method;
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use structopt::StructOpt;
-use types::{CreateGameData, Game, Games, Player};
+use types::{CreateGameData, Game, Games, Player, ScoringMethod};
 
 use crate::types::{Answer, PlayerData, Result};
 use rocket::serde::json::Json;
@@ -35,10 +35,19 @@ fn create_game(
         tiles.clone(),
     )?;
     let dictionary_clone = dictionary.inner().clone();
+    let scoring_method = create_game_data.settings.scoring_method.clone();
     let games_state_clone = games_state.inner().clone();
     let game_id_clone = game_id.to_string();
     tokio::spawn(async move {
-        get_best_words_for_round(dictionary_clone, tiles, games_state_clone, game_id_clone, 0).await
+        get_best_words_for_round(
+            dictionary_clone,
+            tiles,
+            scoring_method,
+            games_state_clone,
+            game_id_clone,
+            0,
+        )
+        .await
     });
     Ok(())
 }
@@ -74,12 +83,20 @@ fn answer(
     let tiles = dictionary.get_random_letters(game.settings.number_of_tiles as usize);
     if game.add_round_if_complete(tiles.clone()) {
         let dictionary_clone = dictionary.inner().clone();
+        let scoring_method = game.settings.scoring_method.clone();
         let games_state_clone = games_state.inner().clone();
         let game_id_clone = game_id.to_string();
         let i = game.rounds.len() - 1;
         tokio::spawn(async move {
-            get_best_words_for_round(dictionary_clone, tiles, games_state_clone, game_id_clone, i)
-                .await
+            get_best_words_for_round(
+                dictionary_clone,
+                tiles,
+                scoring_method,
+                games_state_clone,
+                game_id_clone,
+                i,
+            )
+            .await
         });
     }
     Ok(())
@@ -110,17 +127,20 @@ fn get_score(
 ) -> Result<Json<HashMap<Player, u32>>> {
     let mut games = games.lock().unwrap();
     let game = games.get(game_id)?.clone();
-    Ok(Json(game.get_score(dictionary)))
+    Ok(Json(
+        game.get_score(dictionary, &game.settings.scoring_method),
+    ))
 }
 
 async fn get_best_words_for_round(
     dictionary: Arc<Dictionary>,
     tiles: Vec<char>,
+    scoring_method: ScoringMethod,
     games: Arc<Mutex<Games>>,
     game_id: String,
     round_number: usize,
 ) -> Option<()> {
-    let best_answers = dictionary.get_best_words(&tiles, 5).await;
+    let best_answers = dictionary.get_best_words(&tiles, 5, &scoring_method).await;
     let mut games = games.lock().unwrap();
     let game = games.get(&game_id).ok()?;
     let round = game.rounds.get_mut(round_number)?;

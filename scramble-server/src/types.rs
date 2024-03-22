@@ -39,6 +39,7 @@ pub(crate) enum Error {
     WordNotInDictionary,
     WordUsesExtraLetters,
     InvalidGameSettings,
+    WordMustBeAtLeastTwoLetters,
 }
 
 impl fmt::Display for Error {
@@ -55,6 +56,9 @@ impl fmt::Display for Error {
             Self::WordNotInDictionary => write!(f, "word was not in dictionary"),
             Self::WordUsesExtraLetters => write!(f, "word uses extra letters"),
             Self::InvalidGameSettings => write!(f, "invalid game settings"),
+            Self::WordMustBeAtLeastTwoLetters => {
+                write!(f, "word must be at least two letters long")
+            }
         }
     }
 }
@@ -247,6 +251,10 @@ impl Game {
             if a.player == answer.player {
                 return Ok(());
             }
+        }
+        // Check that the word is at least 2 letters long
+        if answer.answer.len() < 2 {
+            return Err(Error::WordMustBeAtLeastTwoLetters);
         }
         // Check that the word is valid with the letters from this round
         if !Dictionary::check_word_uses_letters(&round.letters, &answer.answer) {

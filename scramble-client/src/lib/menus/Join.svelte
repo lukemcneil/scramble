@@ -15,6 +15,7 @@
 	let number_of_tiles: number = 7;
 	let number_of_lookups: number = 2;
 	let scoring_method: string = 'Normal';
+	let banned_letters: string = '';
 
 	async function onClickCreateGame() {
 		if (name == '') {
@@ -30,7 +31,8 @@
 			name,
 			number_of_tiles,
 			number_of_lookups,
-			scoring_method
+			scoring_method,
+			banned_letters.split('')
 		);
 		response.then((response) => {
 			if (response.ok) {
@@ -111,6 +113,9 @@
 			<input type="radio" name="scoring_method" value={x} bind:group={scoring_method} />
 			{x}
 		{/each}
+	</div>
+	<div>
+		Banned Letters: <input bind:value={banned_letters} style="width: 100px;" />
 	</div>
 	<div>
 		<div>

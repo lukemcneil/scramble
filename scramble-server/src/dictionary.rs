@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
     io::{BufRead, BufReader},
 };
@@ -92,10 +92,19 @@ impl Dictionary {
         words
     }
 
-    pub(crate) fn get_random_letters(&self, size: usize) -> Vec<char> {
+    pub(crate) fn get_random_letters(
+        &self,
+        size: usize,
+        banned_letters: &HashSet<char>,
+    ) -> Vec<char> {
         let mut rng = thread_rng();
         loop {
-            let mut all_tiles = self.all_tiles.clone();
+            let mut all_tiles: Vec<char> = self
+                .all_tiles
+                .iter()
+                .cloned()
+                .filter(|tile| !banned_letters.contains(tile))
+                .collect();
             all_tiles.shuffle(&mut rng);
             all_tiles.truncate(size);
             if self.has_playable_word(&all_tiles) {
@@ -225,7 +234,7 @@ async fn test_scrabble_probability() {
     let mut scrabbles = 0;
     let mut no_words = 0;
     for _ in 0..n {
-        let letters = words.get_random_letters(7);
+        let letters = words.get_random_letters(7, &HashSet::new());
         let best_words = words.get_best_words(&letters, 1, &ScoringMethod::Normal);
         if let Some(best_word) = best_words.await.first() {
             println!("best word len: {}", best_word.word.len());

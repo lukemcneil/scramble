@@ -22,12 +22,21 @@ extern crate rocket;
 #[put("/game/<game_id>", data = "<create_game_data>")]
 fn create_game(
     game_id: &str,
-    create_game_data: Json<CreateGameData>,
+    mut create_game_data: Json<CreateGameData>,
     games_state: &State<Arc<Mutex<Games>>>,
     dictionary: &State<Arc<Dictionary>>,
 ) -> Result<()> {
     let mut games = games_state.lock().unwrap();
-    let tiles = dictionary.get_random_letters(create_game_data.settings.number_of_tiles as usize);
+    create_game_data.settings.banned_letters = create_game_data
+        .settings
+        .banned_letters
+        .iter()
+        .map(char::to_ascii_uppercase)
+        .collect();
+    let tiles = dictionary.get_random_letters(
+        create_game_data.settings.number_of_tiles as usize,
+        &create_game_data.settings.banned_letters,
+    );
     games.create(
         game_id.to_string(),
         create_game_data.player.clone(),
@@ -80,7 +89,10 @@ fn answer(
     let mut games = games_state.lock().unwrap();
     let game = games.get(game_id)?;
     game.answer(answer.into_inner(), dictionary)?;
-    let tiles = dictionary.get_random_letters(game.settings.number_of_tiles as usize);
+    let tiles = dictionary.get_random_letters(
+        game.settings.number_of_tiles as usize,
+        &game.settings.banned_letters,
+    );
     if game.add_round_if_complete(tiles.clone()) {
         let dictionary_clone = dictionary.inner().clone();
         let scoring_method = game.settings.scoring_method.clone();

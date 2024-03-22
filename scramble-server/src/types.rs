@@ -158,6 +158,8 @@ pub(crate) struct GameSettings {
     pub(crate) number_of_lookups: u32,
     /// The method to score words
     pub(crate) scoring_method: ScoringMethod,
+    /// Letters that will not show up
+    pub(crate) banned_letters: HashSet<char>,
 }
 
 impl Default for GameSettings {
@@ -166,6 +168,7 @@ impl Default for GameSettings {
             number_of_tiles: 7,
             number_of_lookups: 2,
             scoring_method: ScoringMethod::Normal,
+            banned_letters: HashSet::new(),
         }
     }
 }

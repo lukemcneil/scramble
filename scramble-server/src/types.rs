@@ -179,7 +179,7 @@ impl Default for GameSettings {
 
 impl GameSettings {
     fn is_valid(&self) -> bool {
-        self.number_of_tiles >= 2 && self.number_of_lookups >= 1
+        self.number_of_tiles >= 2 
     }
 }
 
@@ -278,7 +278,7 @@ impl Game {
             None => {
                 let lookups_used = round.lookups_used.entry(player.clone()).or_default();
                 *lookups_used += 1;
-                if *lookups_used == number_of_lookups {
+                if *lookups_used == number_of_lookups + 1 {
                     let empty_answer = AnswerWithWordInfo {
                         player: answer.player,
                         answer: answer.answer,

@@ -125,8 +125,8 @@ pub(crate) struct Round {
     pub(crate) letters: Vec<char>,
     /// The list of answers given, one per player
     pub(crate) answers: Vec<AnswerWithWordInfo>,
-    /// The number of lookups that a player has used
-    pub(crate) lookups_used: HashMap<Player, u32>,
+    /// The number of guesses that a player has used
+    pub(crate) guesses_used: HashMap<Player, u32>,
     /// The list of best answers for this round
     pub(crate) best_answers: Vec<WordInfo>,
 }
@@ -136,7 +136,7 @@ impl Round {
         Round {
             letters: letters.clone(),
             answers: Vec::new(),
-            lookups_used: HashMap::new(),
+            guesses_used: HashMap::new(),
             best_answers: Vec::new(),
         }
     }
@@ -158,8 +158,8 @@ impl Round {
 pub(crate) struct GameSettings {
     /// The number of tiles to make words from
     pub(crate) number_of_tiles: u32,
-    /// The number of lookups allowed before forfeiting turn
-    pub(crate) number_of_lookups: u32,
+    /// The number of guesses allowed before forfeiting turn
+    pub(crate) number_of_guesses: u32,
     /// The method to score words
     pub(crate) scoring_method: ScoringMethod,
     /// Letters that will not show up
@@ -170,7 +170,7 @@ impl Default for GameSettings {
     fn default() -> Self {
         Self {
             number_of_tiles: 7,
-            number_of_lookups: 2,
+            number_of_guesses: 2,
             scoring_method: ScoringMethod::Normal,
             banned_letters: HashSet::new(),
         }
@@ -179,7 +179,7 @@ impl Default for GameSettings {
 
 impl GameSettings {
     fn is_valid(&self) -> bool {
-        self.number_of_tiles >= 2 
+        self.number_of_tiles >= 2 && self.number_of_guesses >= 1
     }
 }
 
@@ -243,7 +243,7 @@ impl Game {
             return Err(Error::RoundNotInCollectingAnswersState);
         }
 
-        let number_of_lookups = self.settings.number_of_lookups;
+        let number_of_guesses = self.settings.number_of_guesses;
         let scoring_method = self.settings.scoring_method.clone();
         let round = self.current_round_mut();
         // Check if this player already added an answer
@@ -276,9 +276,9 @@ impl Game {
                 Ok(())
             }
             None => {
-                let lookups_used = round.lookups_used.entry(player.clone()).or_default();
-                *lookups_used += 1;
-                if *lookups_used == number_of_lookups + 1 {
+                let guesses_used = round.guesses_used.entry(player.clone()).or_default();
+                *guesses_used += 1;
+                if *guesses_used == number_of_guesses {
                     let empty_answer = AnswerWithWordInfo {
                         player: answer.player,
                         answer: answer.answer,

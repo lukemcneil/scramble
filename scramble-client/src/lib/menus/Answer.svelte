@@ -18,8 +18,8 @@
 	let round_count: number;
 	let error_message: String = '';
 	let waiting_for: Array<string> = [];
-	let lookups_used: number = 0;
-	let lookups_allowed: number = 2;
+	let guesses_used: number = 0;
+	let guesses_allowed: number = 2;
 	let show_score: boolean = true;
 
 	let answer: string = '';
@@ -52,10 +52,10 @@
 			waiting_for = players.filter(
 				(player) => !current_round.answers.some((answer) => answer.player === player)
 			);
-			if (name && current_round.lookups_used.hasOwnProperty(name)) {
-				lookups_used = current_round.lookups_used[name];
+			if (name && current_round.guesses_used.hasOwnProperty(name)) {
+				guesses_used = current_round.guesses_used[name];
 			}
-			lookups_allowed = data.settings.number_of_lookups;
+			guesses_allowed = data.settings.number_of_guesses;
 			show_score = data.settings.scoring_method == 'Normal';
 		} else {
 			if (data.error == 'GameNotFound') {
@@ -108,7 +108,7 @@
 		<InputField bind:value={answer} text="enter your answer" />
 	</div>
 	<div>{error_message}</div>
-	<div>Lookups left: {lookups_allowed - lookups_used}</div>
+	<div>Guesses left: {guesses_allowed - guesses_used}</div>
 	<div style="padding-bottom: 50px">
 		<Button text="Submit" onClick={onSubmitClick} />
 	</div>

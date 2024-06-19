@@ -13,7 +13,7 @@
 	let no_game_room_error_message = 'no game room name';
 	let game_already_exists_error_message = 'this game already exists';
 	let number_of_tiles: number = 7;
-	let number_of_lookups: number = 2;
+	let number_of_guesses: number = 2;
 	let scoring_method: string = 'Normal';
 	let banned_letters: string = '';
 
@@ -30,7 +30,7 @@
 			game_name,
 			name,
 			number_of_tiles,
-			number_of_lookups,
+			number_of_guesses,
 			scoring_method,
 			banned_letters.split('')
 		);
@@ -42,8 +42,9 @@
 			} else {
 				if (response.status == 409) {
 					error_message = game_already_exists_error_message;
+				} else {
+					error_message = 'some other error when making a game';
 				}
-				error_message = 'some other error when making a game';
 			}
 		});
 	}
@@ -99,9 +100,9 @@
 		/>
 	</div>
 	<div>
-		Lookups: <input
+		Guesses: <input
 			type="number"
-			bind:value={number_of_lookups}
+			bind:value={number_of_guesses}
 			min="1"
 			max="10"
 			style="width: 50px;"
